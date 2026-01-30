@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js" // Changed from "prisma-client" for standard JS/TS client
+  output   = "../src/generated/prisma" // Adjusted output path for clarity, will create this folder
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Admin User Model
+model AdminUser {
+  id           String @id @default(uuid())
+  username     String @unique
+  name         String
+  passwordHash String
+
+  @@map("admin_users") // Maps table name to 'admin_users' in DB
+}
+
+// Product Model
+model Product {
+  id            String         @id @default(uuid())
+  name          String
+  price         Float
+  originalPrice Float?
+  image         String
+  category      ProductCategory
+  availability  ProductAvailability
+  description   String?
+  inStock       Boolean        @default(true)
+  isActive      Boolean        @default(true)
+
+  @@map("products")
+}
+
+// Product Category Enum
+enum ProductCategory {
+  perfumes
+  maquilhagem
+  cremes
+}
+
+// Product Availability Enum
+enum ProductAvailability {
+  pronta_entrega @map("pronta-entrega") // Map to match current string value
+  por_encomenda  @map("por-encomenda")  // Map to match current string value
+}
+
+// Order Model
+model Order {
+  id            String        @id @default(uuid())
+  items         Json          // Will store CartItem[] as JSON
+  customer      Json          // Will store CustomerData as JSON
+  paymentMethod PaymentMethod
+  status        OrderStatus   @default(pending)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  totalAmount   Float?
+  notes         String?
+
+  @@map("orders")
+}
+
+// Payment Method Enum
+enum PaymentMethod {
+  cartao
+  multibanco
+  mbway
+  transferencia
+}
+
+// Order Status Enum
+enum OrderStatus {
+  pending
+  confirmed
+  shipped
+  delivered
+  cancelled
+}
+
+// Monthly Sales Model
+model MonthlySales {
+  id      String   @id @default(uuid())
+  month   String
+  year    Int
+  amount  Float
+  target  Float?
+  notes   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([month, year]) // Ensure unique entry per month/year
+  @@map("monthly_sales")
+}
