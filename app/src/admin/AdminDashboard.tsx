@@ -422,7 +422,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                             <p className="text-sm text-sage-500">{category?.name || 'Sem categoria'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                           }`}>
@@ -431,6 +431,24 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           <span className="text-sage-900 font-medium">
                             €{product.price.toFixed(2)}
                           </span>
+                          <button
+                            onClick={() => setEditingProduct(product)}
+                            className="p-2 text-sage-500 hover:text-gold-600 hover:bg-gold-50 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Tem a certeza que deseja eliminar este produto?')) {
+                                deleteProduct(product.id);
+                              }
+                            }}
+                            className="p-2 text-sage-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     );
