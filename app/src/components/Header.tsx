@@ -22,7 +22,7 @@ export function Header({ cartItems, onCartClick, onLogoClick }: HeaderProps) {
             <img
               src="/logo.png"
               alt="Luxury Select"
-              className="h-10 lg:h-12 w-auto"
+              className="h-14 lg:h-16 w-auto"
             />
           </button>
 
