@@ -56,10 +56,10 @@ export function FooterSection() {
               Links úteis
             </h3>
             <div className="flex flex-wrap lg:justify-end gap-4 lg:gap-6 mb-6">
-              <a href="#" className="text-sage-600 hover:text-gold-600 transition-colors">
+              <a href="https://www.instagram.com/silva.lucilia.9/" target="_blank" rel="noopener noreferrer" className="text-sage-600 hover:text-gold-600 transition-colors">
                 Instagram
               </a>
-              <a href="#" className="text-sage-600 hover:text-gold-600 transition-colors">
+              <a href="https://www.facebook.com/silva.lucilia.9" target="_blank" rel="noopener noreferrer" className="text-sage-600 hover:text-gold-600 transition-colors">
                 Facebook
               </a>
               <a href="#" className="text-sage-600 hover:text-gold-600 transition-colors">
@@ -70,14 +70,18 @@ export function FooterSection() {
               </a>
             </div>
             <div className="flex lg:justify-end gap-3">
-              <a 
-                href="#" 
+              <a
+                href="https://www.instagram.com/silva.lucilia.9/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-sage-100 flex items-center justify-center hover:bg-gold-100 transition-colors"
               >
                 <Instagram className="w-4 h-4 text-sage-600" />
               </a>
-              <a 
-                href="#" 
+              <a
+                href="https://www.facebook.com/silva.lucilia.9"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-sage-100 flex items-center justify-center hover:bg-gold-100 transition-colors"
               >
                 <Facebook className="w-4 h-4 text-sage-600" />
@@ -89,7 +93,7 @@ export function FooterSection() {
         {/* Bottom */}
         <div className="pt-8 border-t border-sage-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-sage-500">
-            © 2026 O Boticário Revenda. Todos os direitos reservados.
+            © 2026 Luxury Selet. Todos os direitos reservados.
           </p>
           <p className="text-sm text-sage-500 flex items-center gap-1">
             Feito com <Heart className="w-4 h-4 text-red-400 fill-red-400" /> em Portugal

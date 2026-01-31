@@ -1,15 +1,30 @@
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   originalPrice?: number;
   image: string;
-  category: 'perfumes' | 'maquilhagem' | 'cremes';
+  categoryId: string;
   availability: 'pronta-entrega' | 'por-encomenda';
   description?: string;
   inStock: boolean;
   isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
+
+// Backwards compatibility
+export type ProductCategory = 'perfumes' | 'maquilhagem' | 'cremes';
 
 export interface CartItem {
   product: Product;

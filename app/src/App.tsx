@@ -1,6 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { CartDrawer } from '@/components/CartDrawer';
 import { HeroSection } from '@/sections/HeroSection';
@@ -9,23 +7,28 @@ import { CheckoutSection } from '@/sections/CheckoutSection';
 import { OrderSummarySection } from '@/sections/OrderSummarySection';
 import { ContactSection } from '@/sections/ContactSection';
 import { FooterSection } from '@/sections/FooterSection';
+import { AdminLogin } from '@/admin/AdminLogin';
+import { AdminDashboard } from '@/admin/AdminDashboard';
 import { useCart } from '@/hooks/useCart';
-import { products, featuredProduct } from '@/data/products';
+import { useProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
+import { useAuth } from '@/hooks/useAuth';
+import { products as defaultProducts, featuredProduct as defaultFeaturedProduct } from '@/data/products';
 import { generateWhatsAppLink } from '@/utils/whatsapp';
-import type { CustomerData, PaymentMethod, View } from '@/types';
+import type { CustomerData, PaymentMethod, View, Product } from '@/types';
 import './App.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 function CustomerStore() {
   const {
     items,
-    isLoaded,
+    isLoaded: cartLoaded,
     addToCart,
     removeFromCart,
-    updateQuantity,
-    clearCart
+    updateQuantity
   } = useCart();
+
+  const { products: storedProducts, isLoaded: productsLoaded } = useProducts();
+  const { isLoaded: categoriesLoaded } = useCategories();
 
   const [view, setView] = useState<View>('catalog');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -34,6 +37,12 @@ function CustomerStore() {
 
   const mainRef = useRef<HTMLElement>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
+
+  // Use stored products if available, otherwise use default products
+  const products: Product[] = storedProducts.length > 0 ? storedProducts : defaultProducts;
+
+  // Featured product: first active product or default
+  const featuredProduct = products.find(p => p.isActive) || defaultFeaturedProduct;
 
   const scrollToCatalog = useCallback(() => {
     catalogRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,7 +65,6 @@ function CustomerStore() {
     }, 100);
   }, []);
 
-  // FUNÇÃO CORRIGIDA PARA O WHATSAPP
   const handleWhatsAppSend = useCallback(() => {
     if (!customerData || items.length === 0) return;
 
@@ -73,51 +81,14 @@ function CustomerStore() {
     });
 
     window.open(whatsappUrl, '_blank');
-
-    // Opcional: Descomente as linhas abaixo se quiser limpar o carrinho após enviar
-    // clearCart();
-    // setView('catalog');
   }, [customerData, items, paymentMethod]);
 
-  const prontaEntregaProducts = products.filter(p => p.availability === 'pronta-entrega');
-  const porEncomendaProducts = products.filter(p => p.availability === 'por-encomenda');
+  // Filter active products by availability
+  const activeProducts = products.filter(p => p.isActive);
+  const prontaEntregaProducts = activeProducts.filter(p => p.availability === 'pronta-entrega');
+  const porEncomendaProducts = activeProducts.filter(p => p.availability === 'por-encomenda');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const pinned = ScrollTrigger.getAll()
-        .filter(st => st.vars.pin)
-        .sort((a, b) => a.start - b.start);
-
-      const maxScroll = ScrollTrigger.maxScroll(window);
-      if (!maxScroll || pinned.length === 0) return;
-
-      const pinnedRanges = pinned.map(st => ({
-        start: st.start / maxScroll,
-        end: (st.end ?? st.start) / maxScroll,
-        center: (st.start + ((st.end ?? st.start) - st.start) * 0.5) / maxScroll,
-      }));
-
-      ScrollTrigger.create({
-        snap: {
-          snapTo: (value: number) => {
-            const inPinned = pinnedRanges.some(
-              r => value >= r.start - 0.02 && value <= r.end + 0.02
-            );
-            if (!inPinned) return value;
-            return pinnedRanges.reduce(
-              (closest, r) => Math.abs(r.center - value) < Math.abs(closest - value) ? r.center : closest,
-              pinnedRanges[0]?.center ?? 0
-            );
-          },
-          duration: { min: 0.15, max: 0.35 },
-          delay: 0,
-          ease: 'power2.out',
-        },
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
+  const isLoaded = cartLoaded && productsLoaded && categoriesLoaded;
 
   if (!isLoaded) {
     return (
@@ -200,6 +171,46 @@ function CustomerStore() {
   );
 }
 
+function AdminPanel() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { validateLogin } = useAuth();
+
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    if (validateLogin(username, password)) {
+      setIsLoggedIn(true);
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    window.location.hash = '';
+  };
+
+  if (!isLoggedIn) {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  return <AdminDashboard onLogout={handleLogout} />;
+}
+
 export default function App() {
+  const [currentRoute, setCurrentRoute] = useState(window.location.hash);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentRoute(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  // Mostrar painel admin se URL contém #admin
+  if (currentRoute === '#admin') {
+    return <AdminPanel />;
+  }
+
   return <CustomerStore />;
 }

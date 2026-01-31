@@ -1,21 +1,8 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react';
-
-// Definições de Tipos sincronizadas com o App.tsx e OrderSummary
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  availability?: 'pronta-entrega' | 'por-encomenda';
-}
-
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
+import type { Product, CartItem } from '@/types';
 
 interface CartContextType {
-  items: CartItem[]; // Mudado de 'cart' para 'items' para bater com o App.tsx
+  items: CartItem[];
   isLoaded: boolean;
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;

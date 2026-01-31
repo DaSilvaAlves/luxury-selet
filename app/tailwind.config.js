@@ -67,6 +67,32 @@ module.exports = {
           DEFAULT: '#0B0F0D',
           light: '#111814',
         },
+        // Emerald luxury green
+        emerald: {
+          50: '#ECFDF5',
+          100: '#D1FAE5',
+          200: '#A7F3D0',
+          300: '#6EE7B7',
+          400: '#34D399',
+          500: '#10B981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065F46',
+          900: '#064E3B',
+        },
+        // Forest luxury green (mais sofisticado)
+        forest: {
+          50: '#F0F7F4',
+          100: '#DCF0E5',
+          200: '#B9E0CB',
+          300: '#8BCAA8',
+          400: '#5DB383',
+          500: '#3D9A68',
+          600: '#2D7A52',
+          700: '#256344',
+          800: '#1F4F38',
+          900: '#1A3F2E',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

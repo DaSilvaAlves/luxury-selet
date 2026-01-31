@@ -1,5 +1,3 @@
-import React from 'react';
-
 // SVG otimizado para o ícone do WhatsApp. Evita a instalação de bibliotecas de ícones.
 const WhatsAppIcon = () => (
   <svg

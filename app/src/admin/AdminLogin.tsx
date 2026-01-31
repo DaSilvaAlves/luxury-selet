@@ -35,7 +35,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
         {/* Logo */}
         <div className="text-center mb-8">
           <h1 className="font-heading font-bold text-2xl text-sage-900 mb-2">
-            O Boticário <span className="text-gold-500">Revenda</span>
+            Luxury <span className="text-gold-500">Selet</span>
           </h1>
           <p className="text-sage-600">Painel de Administração</p>
         </div>
@@ -114,11 +114,6 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-xs text-sage-500">
-              Credenciais padrão: admin / admin123
-            </p>
-          </div>
         </div>
 
         {/* Back Link */}

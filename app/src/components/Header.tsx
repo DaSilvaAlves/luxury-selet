@@ -19,7 +19,7 @@ export function Header({ cartItems, onCartClick, onLogoClick }: HeaderProps) {
             onClick={onLogoClick}
             className="font-heading font-bold text-lg lg:text-xl text-sage-900 hover:text-gold-600 transition-colors"
           >
-            O Boticário <span className="text-gold-500">Revenda</span>
+            Luxury <span className="text-gold-500">Selet</span>
           </button>
 
           {/* Navigation Icons */}
