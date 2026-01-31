@@ -19,6 +19,7 @@ export interface Product {
   description?: string;
   inStock: boolean;
   isActive: boolean;
+  isFeatured?: boolean; // Produto em destaque na capa
   createdAt: string;
   updatedAt?: string;
 }

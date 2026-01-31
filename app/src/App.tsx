@@ -27,7 +27,7 @@ function CustomerStore() {
     updateQuantity
   } = useCart();
 
-  const { products: storedProducts, isLoaded: productsLoaded } = useProducts();
+  const { products: storedProducts, isLoaded: productsLoaded, getFeaturedProduct } = useProducts();
   const { isLoaded: categoriesLoaded } = useCategories();
 
   const [view, setView] = useState<View>('catalog');
@@ -41,8 +41,8 @@ function CustomerStore() {
   // Use ONLY stored products from admin (no mock data)
   const products: Product[] = storedProducts;
 
-  // Featured product: first active product or null
-  const featuredProduct = products.find(p => p.isActive) || null;
+  // Featured product: product marked as featured, or first active, or null
+  const featuredProduct = getFeaturedProduct();
 
   const scrollToCatalog = useCallback(() => {
     catalogRef.current?.scrollIntoView({ behavior: 'smooth' });

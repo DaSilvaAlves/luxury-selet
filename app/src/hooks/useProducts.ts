@@ -78,6 +78,20 @@ export function useProducts() {
     }
   }, [products, updateProduct]);
 
+  const setFeaturedProduct = useCallback((id: string) => {
+    // Remove featured from all products and set it on the selected one
+    const updated = products.map(prod => ({
+      ...prod,
+      isFeatured: prod.id === id,
+      updatedAt: prod.id === id ? new Date().toISOString() : prod.updatedAt,
+    }));
+    saveProducts(updated);
+  }, [products, saveProducts]);
+
+  const getFeaturedProduct = useCallback(() => {
+    return products.find(p => p.isFeatured && p.isActive) || products.find(p => p.isActive) || null;
+  }, [products]);
+
   return {
     products,
     isLoaded,
@@ -90,5 +104,7 @@ export function useProducts() {
     getProductById,
     toggleProductActive,
     toggleProductStock,
+    setFeaturedProduct,
+    getFeaturedProduct,
   };
 }
