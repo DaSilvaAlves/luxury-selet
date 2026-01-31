@@ -191,13 +191,13 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     setTimeout(() => setImportMessage(null), 5000);
   };
 
-  const handleUpdateCredentials = () => {
+  const handleUpdateCredentials = async () => {
     if (newPassword !== confirmPassword) {
       setCredentialsMessage({ success: false, text: 'As senhas não coincidem.' });
       return;
     }
 
-    const result = updateCredentials(newUsername, newPassword);
+    const result = await updateCredentials(newUsername, newPassword);
     setCredentialsMessage({ success: result.success, text: result.message });
 
     if (result.success) {

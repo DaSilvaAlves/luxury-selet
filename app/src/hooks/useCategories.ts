@@ -1,115 +1,212 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { Category } from '@/types';
 
-const STORAGE_KEY = 'luxury-selet-categories';
-
-const defaultCategories: Category[] = [
+const defaultCategories: Omit<Category, 'id' | 'createdAt'>[] = [
   {
-    id: 'perfumes-mulher',
     name: 'Perfumes Mulher',
     slug: 'perfumes-mulher',
     description: 'Fragrâncias femininas',
     order: 1,
     isActive: true,
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'perfumes-homem',
     name: 'Perfumes Homem',
     slug: 'perfumes-homem',
     description: 'Fragrâncias masculinas',
     order: 2,
     isActive: true,
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'maquilhagem',
     name: 'Maquilhagem',
     slug: 'maquilhagem',
     description: 'Produtos de maquilhagem',
     order: 3,
     isActive: true,
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'cuidados-pele',
     name: 'Cuidados de Pele',
     slug: 'cuidados-pele',
     description: 'Cremes e tratamentos',
     order: 4,
     isActive: true,
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'cabelos',
     name: 'Cabelos',
     slug: 'cabelos',
     description: 'Produtos capilares',
     order: 5,
     isActive: true,
-    createdAt: new Date().toISOString(),
   },
 ];
+
+// Convert database row to Category type
+function dbToCategory(row: any): Category {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    description: row.description || undefined,
+    order: row.sort_order,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+  };
+}
+
+// Convert Category to database row format
+function categoryToDb(category: Partial<Category>): any {
+  const row: any = {};
+  if (category.name !== undefined) row.name = category.name;
+  if (category.slug !== undefined) row.slug = category.slug;
+  if (category.description !== undefined) row.description = category.description;
+  if (category.order !== undefined) row.sort_order = category.order;
+  if (category.isActive !== undefined) row.is_active = category.isActive;
+  return row;
+}
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load categories from localStorage
-  useEffect(() => {
+  // Load categories from Supabase
+  const loadCategories = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setCategories(JSON.parse(stored));
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Error loading categories:', error);
+        setIsLoaded(true);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setCategories(data.map(dbToCategory));
       } else {
-        // Initialize with default categories
-        setCategories(defaultCategories);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultCategories));
+        // Seed default categories if empty
+        await seedDefaultCategories();
       }
     } catch (error) {
       console.error('Error loading categories:', error);
-      setCategories(defaultCategories);
+    } finally {
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
   }, []);
 
-  // Save to localStorage whenever categories change
-  const saveCategories = useCallback((newCategories: Category[]) => {
-    setCategories(newCategories);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newCategories));
-  }, []);
+  // Seed default categories
+  const seedDefaultCategories = async () => {
+    const toInsert = defaultCategories.map(cat => ({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description,
+      sort_order: cat.order,
+      is_active: cat.isActive,
+    }));
 
-  const addCategory = useCallback((category: Omit<Category, 'id' | 'createdAt' | 'order'>) => {
-    const newCategory: Category = {
-      ...category,
-      id: `cat-${Date.now()}`,
+    const { data, error } = await supabase
+      .from('categories')
+      .insert(toInsert)
+      .select();
+
+    if (error) {
+      console.error('Error seeding categories:', error);
+      return;
+    }
+
+    if (data) {
+      setCategories(data.map(dbToCategory));
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  const addCategory = useCallback(async (category: Omit<Category, 'id' | 'createdAt' | 'order'>) => {
+    const dbRow = {
+      name: category.name,
       slug: category.slug || category.name.toLowerCase().replace(/\s+/g, '-'),
-      order: categories.length + 1,
-      createdAt: new Date().toISOString(),
+      description: category.description,
+      sort_order: categories.length + 1,
+      is_active: category.isActive,
     };
-    saveCategories([...categories, newCategory]);
-    return newCategory;
-  }, [categories, saveCategories]);
 
-  const updateCategory = useCallback((id: string, updates: Partial<Category>) => {
-    const updated = categories.map(cat =>
-      cat.id === id ? { ...cat, ...updates } : cat
-    );
-    saveCategories(updated);
-  }, [categories, saveCategories]);
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([dbRow])
+      .select()
+      .single();
 
-  const deleteCategory = useCallback((id: string) => {
-    const filtered = categories.filter(cat => cat.id !== id);
-    saveCategories(filtered);
-  }, [categories, saveCategories]);
+    if (error) {
+      console.error('Error adding category:', error);
+      return null;
+    }
 
-  const reorderCategories = useCallback((reorderedCategories: Category[]) => {
-    const updated = reorderedCategories.map((cat, index) => ({
+    if (data) {
+      const newCategory = dbToCategory(data);
+      setCategories(prev => [...prev, newCategory]);
+      return newCategory;
+    }
+    return null;
+  }, [categories.length]);
+
+  const updateCategory = useCallback(async (id: string, updates: Partial<Category>) => {
+    const dbUpdates = categoryToDb(updates);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating category:', error);
+      return;
+    }
+
+    if (data) {
+      const updatedCategory = dbToCategory(data);
+      setCategories(prev => prev.map(c => c.id === id ? updatedCategory : c));
+    }
+  }, []);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting category:', error);
+      return;
+    }
+
+    setCategories(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  const reorderCategories = useCallback(async (reorderedCategories: Category[]) => {
+    // Update each category's order in the database
+    const updates = reorderedCategories.map((cat, index) => ({
+      id: cat.id,
+      sort_order: index + 1,
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from('categories')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id);
+    }
+
+    // Update local state
+    setCategories(reorderedCategories.map((cat, index) => ({
       ...cat,
       order: index + 1,
-    }));
-    saveCategories(updated);
-  }, [saveCategories]);
+    })));
+  }, []);
 
   const getActiveCategories = useCallback(() => {
     return categories
@@ -130,5 +227,6 @@ export function useCategories() {
     reorderCategories,
     getActiveCategories,
     getCategoryById,
+    refresh: loadCategories,
   };
 }

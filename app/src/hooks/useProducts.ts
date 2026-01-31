@@ -1,52 +1,129 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import type { Product } from '@/types';
 
-const STORAGE_KEY = 'luxury-selet-products';
+// Convert database row to Product type
+function dbToProduct(row: any): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    price: Number(row.price),
+    originalPrice: row.original_price ? Number(row.original_price) : undefined,
+    image: row.image,
+    categoryId: row.category_id,
+    availability: row.availability,
+    description: row.description || undefined,
+    inStock: row.in_stock,
+    isActive: row.is_active,
+    isFeatured: row.is_featured,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// Convert Product to database row format
+function productToDb(product: Partial<Product>): any {
+  const row: any = {};
+  if (product.name !== undefined) row.name = product.name;
+  if (product.price !== undefined) row.price = product.price;
+  if (product.originalPrice !== undefined) row.original_price = product.originalPrice;
+  if (product.image !== undefined) row.image = product.image;
+  if (product.categoryId !== undefined) row.category_id = product.categoryId;
+  if (product.availability !== undefined) row.availability = product.availability;
+  if (product.description !== undefined) row.description = product.description;
+  if (product.inStock !== undefined) row.in_stock = product.inStock;
+  if (product.isActive !== undefined) row.is_active = product.isActive;
+  if (product.isFeatured !== undefined) row.is_featured = product.isFeatured;
+  return row;
+}
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load products from localStorage
-  useEffect(() => {
+  // Load products from Supabase
+  const loadProducts = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setProducts(JSON.parse(stored));
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading products:', error);
+        return;
+      }
+
+      if (data) {
+        setProducts(data.map(dbToProduct));
       }
     } catch (error) {
       console.error('Error loading products:', error);
+    } finally {
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
   }, []);
 
-  // Save to localStorage whenever products change
-  const saveProducts = useCallback((newProducts: Product[]) => {
-    setProducts(newProducts);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newProducts));
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt'>) => {
+    const dbRow = productToDb(product);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([dbRow])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding product:', error);
+      return null;
+    }
+
+    if (data) {
+      const newProduct = dbToProduct(data);
+      setProducts(prev => [newProduct, ...prev]);
+      return newProduct;
+    }
+    return null;
   }, []);
 
-  const addProduct = useCallback((product: Omit<Product, 'id' | 'createdAt'>) => {
-    const newProduct: Product = {
-      ...product,
-      id: `prod-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    saveProducts([...products, newProduct]);
-    return newProduct;
-  }, [products, saveProducts]);
+  const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
+    const dbUpdates = productToDb(updates);
 
-  const updateProduct = useCallback((id: string, updates: Partial<Product>) => {
-    const updated = products.map(prod =>
-      prod.id === id ? { ...prod, ...updates, updatedAt: new Date().toISOString() } : prod
-    );
-    saveProducts(updated);
-  }, [products, saveProducts]);
+    const { data, error } = await supabase
+      .from('products')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select()
+      .single();
 
-  const deleteProduct = useCallback((id: string) => {
-    const filtered = products.filter(prod => prod.id !== id);
-    saveProducts(filtered);
-  }, [products, saveProducts]);
+    if (error) {
+      console.error('Error updating product:', error);
+      return;
+    }
+
+    if (data) {
+      const updatedProduct = dbToProduct(data);
+      setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
+    }
+  }, []);
+
+  const deleteProduct = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting product:', error);
+      return;
+    }
+
+    setProducts(prev => prev.filter(p => p.id !== id));
+  }, []);
 
   const getProductsByCategory = useCallback((categoryId: string) => {
     return products.filter(prod => prod.categoryId === categoryId && prod.isActive);
@@ -64,29 +141,48 @@ export function useProducts() {
     return products.find(prod => prod.id === id);
   }, [products]);
 
-  const toggleProductActive = useCallback((id: string) => {
+  const toggleProductActive = useCallback(async (id: string) => {
     const product = products.find(p => p.id === id);
     if (product) {
-      updateProduct(id, { isActive: !product.isActive });
+      await updateProduct(id, { isActive: !product.isActive });
     }
   }, [products, updateProduct]);
 
-  const toggleProductStock = useCallback((id: string) => {
+  const toggleProductStock = useCallback(async (id: string) => {
     const product = products.find(p => p.id === id);
     if (product) {
-      updateProduct(id, { inStock: !product.inStock });
+      await updateProduct(id, { inStock: !product.inStock });
     }
   }, [products, updateProduct]);
 
-  const setFeaturedProduct = useCallback((id: string) => {
-    // Remove featured from all products and set it on the selected one
-    const updated = products.map(prod => ({
+  const setFeaturedProduct = useCallback(async (id: string) => {
+    // First, remove featured from all products
+    const { error: resetError } = await supabase
+      .from('products')
+      .update({ is_featured: false })
+      .neq('id', id);
+
+    if (resetError) {
+      console.error('Error resetting featured:', resetError);
+    }
+
+    // Then set the selected product as featured
+    const { error } = await supabase
+      .from('products')
+      .update({ is_featured: true })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error setting featured:', error);
+      return;
+    }
+
+    // Update local state
+    setProducts(prev => prev.map(prod => ({
       ...prod,
       isFeatured: prod.id === id,
-      updatedAt: prod.id === id ? new Date().toISOString() : prod.updatedAt,
-    }));
-    saveProducts(updated);
-  }, [products, saveProducts]);
+    })));
+  }, []);
 
   const getFeaturedProduct = useCallback(() => {
     return products.find(p => p.isFeatured && p.isActive) || products.find(p => p.isActive) || null;
@@ -106,5 +202,6 @@ export function useProducts() {
     toggleProductStock,
     setFeaturedProduct,
     getFeaturedProduct,
+    refresh: loadProducts,
   };
 }
