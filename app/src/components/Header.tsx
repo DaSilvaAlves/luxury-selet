@@ -15,11 +15,15 @@ export function Header({ cartItems, onCartClick, onLogoClick }: HeaderProps) {
       <div className="section-padding">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <button 
+          <button
             onClick={onLogoClick}
-            className="font-heading font-bold text-lg lg:text-xl text-sage-900 hover:text-gold-600 transition-colors"
+            className="hover:opacity-80 transition-opacity"
           >
-            Luxury <span className="text-gold-500">Selet</span>
+            <img
+              src="/logo.png"
+              alt="Luxury Select"
+              className="h-10 lg:h-12 w-auto"
+            />
           </button>
 
           {/* Navigation Icons */}
