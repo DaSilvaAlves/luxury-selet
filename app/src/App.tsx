@@ -13,7 +13,7 @@ import { useCart } from '@/hooks/useCart';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useAuth } from '@/hooks/useAuth';
-import { products as defaultProducts, featuredProduct as defaultFeaturedProduct } from '@/data/products';
+// Products are now managed via admin panel only
 import { generateWhatsAppLink } from '@/utils/whatsapp';
 import type { CustomerData, PaymentMethod, View, Product } from '@/types';
 import './App.css';
@@ -38,11 +38,11 @@ function CustomerStore() {
   const mainRef = useRef<HTMLElement>(null);
   const catalogRef = useRef<HTMLDivElement>(null);
 
-  // Use stored products if available, otherwise use default products
-  const products: Product[] = storedProducts.length > 0 ? storedProducts : defaultProducts;
+  // Use ONLY stored products from admin (no mock data)
+  const products: Product[] = storedProducts;
 
-  // Featured product: first active product or default
-  const featuredProduct = products.find(p => p.isActive) || defaultFeaturedProduct;
+  // Featured product: first active product or null
+  const featuredProduct = products.find(p => p.isActive) || null;
 
   const scrollToCatalog = useCallback(() => {
     catalogRef.current?.scrollIntoView({ behavior: 'smooth' });
