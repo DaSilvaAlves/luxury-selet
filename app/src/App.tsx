@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { CartDrawer } from '@/components/CartDrawer';
+import { AboutModal } from '@/components/AboutModal';
 import { HeroSection } from '@/sections/HeroSection';
 import { CatalogSection } from '@/sections/CatalogSection';
 import { CheckoutSection } from '@/sections/CheckoutSection';
@@ -32,6 +33,7 @@ function CustomerStore() {
 
   const [view, setView] = useState<View>('catalog');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mbway');
 
@@ -107,6 +109,12 @@ function CustomerStore() {
           setView('catalog');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        onAboutClick={() => setIsAboutOpen(true)}
+      />
+
+      <AboutModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
       />
 
       <CartDrawer

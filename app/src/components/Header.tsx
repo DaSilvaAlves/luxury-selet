@@ -5,9 +5,10 @@ interface HeaderProps {
   cartItems: CartItem[];
   onCartClick: () => void;
   onLogoClick: () => void;
+  onAboutClick: () => void;
 }
 
-export function Header({ cartItems, onCartClick, onLogoClick }: HeaderProps) {
+export function Header({ cartItems, onCartClick, onLogoClick, onAboutClick }: HeaderProps) {
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -42,9 +43,11 @@ export function Header({ cartItems, onCartClick, onLogoClick }: HeaderProps) {
             >
               <Settings className="w-5 h-5 text-sage-700" />
             </a>
-            <button 
+            <button
+              onClick={onAboutClick}
               className="p-2 rounded-xl hover:bg-sage-100 transition-colors"
-              aria-label="Conta"
+              aria-label="Sobre"
+              title="Sobre Lucília Silva"
             >
               <User className="w-5 h-5 text-sage-700" />
             </button>
