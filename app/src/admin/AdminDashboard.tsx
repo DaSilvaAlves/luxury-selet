@@ -51,7 +51,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     deleteCategory,
     getCategoryById
   } = useCategories();
-  const { exportData, importData, getStorageSize } = useDataBackup();
+  const { exportData, importData } = useDataBackup();
   const { updateCredentials, isUsingDefaultCredentials, getCurrentUsername } = useAuth();
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -208,8 +208,6 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     }
   };
 
-  const storageSize = getStorageSize();
-
   if (!productsLoaded || !categoriesLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-sage-50">
@@ -358,11 +356,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     </div>
                   </div>
                   <p className="text-sm text-sage-500 mb-1">Armazenamento</p>
-                  <p className="text-3xl font-heading font-bold text-sage-900">
-                    {storageSize.formatted}
+                  <p className="text-3xl font-heading font-bold text-emerald-600">
+                    Cloud
                   </p>
                   <p className="text-xs text-sage-500 mt-2">
-                    localStorage usado
+                    Supabase (sincroniza em todos dispositivos)
                   </p>
                 </div>
               </div>
