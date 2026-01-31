@@ -28,7 +28,7 @@ function CustomerStore() {
   } = useCart();
 
   const { products: storedProducts, isLoaded: productsLoaded, getFeaturedProduct } = useProducts();
-  const { isLoaded: categoriesLoaded } = useCategories();
+  const { categories, isLoaded: categoriesLoaded } = useCategories();
 
   const [view, setView] = useState<View>('catalog');
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -83,10 +83,8 @@ function CustomerStore() {
     window.open(whatsappUrl, '_blank');
   }, [customerData, items, paymentMethod]);
 
-  // Filter active products by availability
+  // Filter active products only
   const activeProducts = products.filter(p => p.isActive);
-  const prontaEntregaProducts = activeProducts.filter(p => p.availability === 'pronta-entrega');
-  const porEncomendaProducts = activeProducts.filter(p => p.availability === 'por-encomenda');
 
   const isLoaded = cartLoaded && productsLoaded && categoriesLoaded;
 
@@ -130,19 +128,11 @@ function CustomerStore() {
         <div ref={catalogRef}>
           <CatalogSection
             id="catalog"
-            title="Pronta entrega"
-            subtitle="Os favoritos de sempre — envio em 24h."
-            products={prontaEntregaProducts}
+            products={activeProducts}
+            categories={categories}
             onAddToCart={addToCart}
           />
         </div>
-
-        <CatalogSection
-          title="Por encomenda"
-          subtitle="Edições especiais e kits personalizados."
-          products={porEncomendaProducts}
-          onAddToCart={addToCart}
-        />
 
         <CheckoutSection
           id="checkout"
