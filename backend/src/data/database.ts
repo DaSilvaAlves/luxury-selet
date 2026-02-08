@@ -1,4 +1,4 @@
-import type { Product, Order, AdminUser, MonthlySales } from '../types';
+import type { Product, Order, AdminUser, MonthlySales, Category } from '../types';
 
 // Admin user (senha: admin123)
 export const adminUsers: AdminUser[] = [
@@ -8,6 +8,55 @@ export const adminUsers: AdminUser[] = [
     name: 'Administrador',
     passwordHash: '$2b$10$YourHashHere' // Em produção, usar bcrypt
   }
+];
+
+// Categories
+export let categories: Category[] = [
+  {
+    id: 'cat-1',
+    name: 'Perfumes Mulher',
+    slug: 'perfumes-mulher',
+    description: 'Fragrâncias femininas',
+    order: 1,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'cat-2',
+    name: 'Perfumes Homem',
+    slug: 'perfumes-homem',
+    description: 'Fragrâncias masculinas',
+    order: 2,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'cat-3',
+    name: 'Maquilhagem',
+    slug: 'maquilhagem',
+    description: 'Produtos de maquilhagem',
+    order: 3,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'cat-4',
+    name: 'Cuidados de Pele',
+    slug: 'cuidados-pele',
+    description: 'Cremes e tratamentos',
+    order: 4,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'cat-5',
+    name: 'Cabelos',
+    slug: 'cabelos',
+    description: 'Produtos capilares',
+    order: 5,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 // Products
@@ -189,13 +238,44 @@ export const updateOrder = (id: string, updates: Partial<Order>): Order | null =
 
 export const updateMonthlySales = (month: string, year: number, amount: number, notes?: string): MonthlySales => {
   const index = monthlySales.findIndex(s => s.month === month && s.year === year);
-  
+
   if (index !== -1) {
     monthlySales[index] = { ...monthlySales[index], amount, notes };
     return monthlySales[index];
   }
-  
+
   const newSales: MonthlySales = { month, year, amount, notes };
   monthlySales.push(newSales);
   return newSales;
+};
+
+// Category management
+export const getCategoryById = (id: string): Category | undefined => {
+  return categories.find(c => c.id === id);
+};
+
+export const addCategory = (category: Omit<Category, 'id' | 'createdAt'>): Category => {
+  const newCategory: Category = {
+    ...category,
+    id: `cat-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  categories.push(newCategory);
+  return newCategory;
+};
+
+export const updateCategory = (id: string, updates: Partial<Category>): Category | null => {
+  const index = categories.findIndex(c => c.id === id);
+  if (index === -1) return null;
+
+  categories[index] = { ...categories[index], ...updates };
+  return categories[index];
+};
+
+export const deleteCategory = (id: string): boolean => {
+  const index = categories.findIndex(c => c.id === id);
+  if (index === -1) return false;
+
+  categories.splice(index, 1);
+  return true;
 };

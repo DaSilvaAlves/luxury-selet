@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { products, orders, monthlySales, adminUsers, addOrder, updateOrder, updateProduct, updateMonthlySales } from './data/database';
+import { products, orders, monthlySales, adminUsers, categories, addOrder, updateOrder, updateProduct, updateMonthlySales, addCategory, updateCategory, deleteCategory, getCategoryById } from './data/database';
 import type { Order, CustomerData, PaymentMethod } from './types';
 
 dotenv.config();
@@ -135,7 +135,7 @@ app.get('/api/admin/products', authenticateToken, (req, res) => {
 // Update product
 app.put('/api/admin/products/:id', authenticateToken, (req, res) => {
   const { price, originalPrice, inStock, isActive } = req.body;
-  
+
   const updated = updateProduct(req.params.id, {
     price,
     originalPrice,
@@ -148,6 +148,62 @@ app.put('/api/admin/products/:id', authenticateToken, (req, res) => {
   }
 
   res.json(updated);
+});
+
+// ========== CATEGORIES MANAGEMENT ==========
+
+// Get all categories
+app.get('/api/admin/categories', authenticateToken, (req, res) => {
+  res.json(categories);
+});
+
+// Create category
+app.post('/api/admin/categories', authenticateToken, (req, res) => {
+  const { name, slug, description, isActive, order } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Category name is required' });
+  }
+
+  const newCategory = addCategory({
+    name,
+    slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+    description,
+    isActive: isActive ?? true,
+    order: order ?? categories.length + 1,
+  });
+
+  res.status(201).json(newCategory);
+});
+
+// Update category
+app.put('/api/admin/categories/:id', authenticateToken, (req, res) => {
+  const { name, slug, description, isActive, order } = req.body;
+
+  const updated = updateCategory(req.params.id, {
+    name,
+    slug,
+    description,
+    isActive,
+    order,
+  });
+
+  if (!updated) {
+    return res.status(404).json({ error: 'Category not found' });
+  }
+
+  res.json(updated);
+});
+
+// Delete category
+app.delete('/api/admin/categories/:id', authenticateToken, (req, res) => {
+  const deleted = deleteCategory(req.params.id);
+
+  if (!deleted) {
+    return res.status(404).json({ error: 'Category not found' });
+  }
+
+  res.json({ success: true });
 });
 
 // ========== ORDERS MANAGEMENT ==========

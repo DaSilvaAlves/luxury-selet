@@ -67,3 +67,13 @@ export interface DashboardStats {
   totalProducts: number;
   activeProducts: number;
 }
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+}
