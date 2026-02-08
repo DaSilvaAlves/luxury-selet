@@ -116,12 +116,15 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       return;
     }
 
+    const selectedCategory = categories.find(c => c.id === newProduct.categoryId);
+
     try {
       const result = await addProduct({
         name: newProduct.name,
         price: newProduct.price,
         originalPrice: newProduct.originalPrice,
         image: newProduct.image || '/images/placeholder.jpg',
+        category: selectedCategory?.name || '', // Passar o nome
         categoryId: newProduct.categoryId,
         availability: newProduct.availability || 'pronta-entrega',
         description: newProduct.description,
@@ -154,8 +157,14 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
+
+    const selectedCategory = categories.find(c => c.id === editingProduct.categoryId);
+
     try {
-      await updateProduct(editingProduct.id, editingProduct);
+      await updateProduct(editingProduct.id, {
+        ...editingProduct,
+        category: selectedCategory?.name || editingProduct.category || ''
+      });
       setEditingProduct(null);
     } catch (error) {
       console.error('Error updating product:', error);
@@ -264,8 +273,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard'
-                ? 'bg-gold-50 text-gold-700'
-                : 'text-sage-600 hover:bg-sage-50'
+              ? 'bg-gold-50 text-gold-700'
+              : 'text-sage-600 hover:bg-sage-50'
               }`}
           >
             <LayoutDashboard className="w-5 h-5" />
@@ -274,8 +283,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <button
             onClick={() => setActiveTab('categories')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'categories'
-                ? 'bg-gold-50 text-gold-700'
-                : 'text-sage-600 hover:bg-sage-50'
+              ? 'bg-gold-50 text-gold-700'
+              : 'text-sage-600 hover:bg-sage-50'
               }`}
           >
             <FolderOpen className="w-5 h-5" />
@@ -287,8 +296,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <button
             onClick={() => setActiveTab('products')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'products'
-                ? 'bg-gold-50 text-gold-700'
-                : 'text-sage-600 hover:bg-sage-50'
+              ? 'bg-gold-50 text-gold-700'
+              : 'text-sage-600 hover:bg-sage-50'
               }`}
           >
             <Package className="w-5 h-5" />
@@ -300,8 +309,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           <button
             onClick={() => setActiveTab('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'settings'
-                ? 'bg-gold-50 text-gold-700'
-                : 'text-sage-600 hover:bg-sage-50'
+              ? 'bg-gold-50 text-gold-700'
+              : 'text-sage-600 hover:bg-sage-50'
               }`}
           >
             <Settings className="w-5 h-5" />
@@ -468,8 +477,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           <button
                             onClick={() => setFeaturedProduct(product.id)}
                             className={`p-2 rounded-lg transition-colors ${product.isFeatured
-                                ? 'text-amber-500 bg-amber-50'
-                                : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
+                              ? 'text-amber-500 bg-amber-50'
+                              : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
                               }`}
                             title={product.isFeatured ? 'Produto em destaque' : 'Colocar em destaque'}
                           >
@@ -638,8 +647,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                               <button
                                 onClick={() => toggleProductActive(product.id)}
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${product.isActive
-                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                   }`}
                               >
                                 {product.isActive ? (
@@ -660,8 +669,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                                 <button
                                   onClick={() => setFeaturedProduct(product.id)}
                                   className={`p-2 rounded-lg transition-colors ${product.isFeatured
-                                      ? 'text-amber-500 bg-amber-50'
-                                      : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
+                                    ? 'text-amber-500 bg-amber-50'
+                                    : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
                                     }`}
                                   title={product.isFeatured ? 'Produto em destaque' : 'Colocar em destaque na capa'}
                                 >
@@ -707,8 +716,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
             <div className="space-y-6">
               {importMessage && (
                 <div className={`p-4 rounded-xl ${importMessage.includes('sucesso') || importMessage.includes('Importados')
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
                   }`}>
                   {importMessage}
                 </div>
@@ -775,8 +784,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
                 {credentialsMessage && (
                   <div className={`p-4 rounded-xl mb-4 ${credentialsMessage.success
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                     }`}>
                     {credentialsMessage.text}
                   </div>

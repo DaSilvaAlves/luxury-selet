@@ -14,6 +14,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
+  category: string; // Nome da categoria para compatibilidade
   categoryId: string;
   availability: 'pronta-entrega' | 'por-encomenda';
   description?: string;

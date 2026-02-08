@@ -10,6 +10,7 @@ function dbToProduct(row: any): Product {
     price: Number(row.price),
     originalPrice: row.original_price ? Number(row.original_price) : undefined,
     image: row.image,
+    category: row.category_name || '', // Adicionado
     categoryId: row.category_id,
     availability: row.availability,
     description: row.description || undefined,
@@ -28,6 +29,7 @@ function productToDb(product: Partial<Product>): any {
   if (product.price !== undefined) row.price = product.price;
   if (product.originalPrice !== undefined) row.original_price = product.originalPrice;
   if (product.image !== undefined) row.image = product.image;
+  if (product.category !== undefined) row.category_name = product.category;
   if (product.categoryId !== undefined) row.category_id = product.categoryId;
   if (product.availability !== undefined) row.availability = product.availability;
   if (product.description !== undefined) row.description = product.description;
