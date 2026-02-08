@@ -2,8 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js" // Changed from "prisma-client" for standard JS/TS client
-  output   = "../src/generated/prisma" // Adjusted output path for clarity, will create this folder
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -28,7 +27,9 @@ model Product {
   price         Float
   originalPrice Float?
   image         String
-  category      ProductCategory
+  categoryName  String         @map("category") // Keeping string field for backward compatibility if needed
+  categoryId    String?        @map("category_id")
+  category      Category?       @relation(fields: [categoryId], references: [id])
   availability  ProductAvailability
   description   String?
   inStock       Boolean        @default(true)
@@ -37,11 +38,18 @@ model Product {
   @@map("products")
 }
 
-// Product Category Enum
-enum ProductCategory {
-  perfumes
-  maquilhagem
-  cremes
+// Category Model
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  order       Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  products    Product[]
+
+  @@map("categories")
 }
 
 // Product Availability Enum

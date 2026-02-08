@@ -17,8 +17,9 @@ export function useCategories() {
   // Load categories from Backend API first, then Supabase, then localStorage
   const loadCategories = useCallback(async () => {
     console.log('[useCategories] Loading categories...');
+    let loadedData: Category[] | null = null;
 
-    // Try Backend API first
+    // 1. Try Backend API first
     try {
       const token = getAuthToken();
       if (token) {
@@ -28,55 +29,55 @@ export function useCategories() {
         });
 
         if (response.ok) {
-          const data: Category[] = await response.json();
-          console.log('[useCategories] Loaded from Backend:', data.length, 'categories');
-          setCategories(data);
-          localStorage.setItem('luxury-selet-categories', JSON.stringify(data));
-          setIsLoaded(true);
-          return;
+          loadedData = await response.json();
+          console.log('[useCategories] Loaded from Backend:', loadedData?.length, 'categories');
         }
       }
     } catch (error) {
       console.warn('[useCategories] Backend API error:', error);
     }
 
-    // Fallback to localStorage
-    try {
-      console.log('[useCategories] Trying localStorage...');
-      const stored = localStorage.getItem('luxury-selet-categories');
-      if (stored) {
-        const data = JSON.parse(stored) as Category[];
-        console.log('[useCategories] Loaded from localStorage:', data.length, 'categories');
-        setCategories(data);
-        setIsLoaded(true);
-        return;
+    // 2. Try Supabase if Backend failed or returned no categories
+    if (!loadedData || loadedData.length === 0) {
+      try {
+        console.log('[useCategories] Trying Supabase...');
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .order('sort_order', { ascending: true });
+
+        if (error) throw error;
+        if (data && data.length > 0) {
+          loadedData = data.map(dbToCategory);
+          console.log('[useCategories] Loaded from Supabase:', loadedData.length, 'categories');
+        }
+      } catch (error) {
+        console.warn('[useCategories] Supabase error:', error);
       }
-    } catch (error) {
-      console.warn('[useCategories] localStorage error:', error);
     }
 
-    // Fallback to Supabase
-    try {
-      console.log('[useCategories] Trying Supabase...');
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-      if (data && data.length > 0) {
-        console.log('[useCategories] Loaded from Supabase:', data.length, 'categories');
-        setCategories(data.map(dbToCategory));
-        setIsLoaded(true);
-        return;
+    // 3. Fallback to localStorage as last resort
+    if (!loadedData || loadedData.length === 0) {
+      try {
+        console.log('[useCategories] Trying localStorage fallback...');
+        const stored = localStorage.getItem('luxury-selet-categories');
+        if (stored) {
+          loadedData = JSON.parse(stored) as Category[];
+          console.log('[useCategories] Loaded from localStorage:', loadedData.length, 'categories');
+        }
+      } catch (error) {
+        console.warn('[useCategories] localStorage error:', error);
       }
-    } catch (error) {
-      console.warn('[useCategories] Supabase error:', error);
     }
 
-    // All failed, start with empty
-    console.log('[useCategories] All sources failed, starting with empty');
-    setCategories([]);
+    // Finalize: Set state and update cache
+    if (loadedData) {
+      setCategories(loadedData);
+      localStorage.setItem('luxury-selet-categories', JSON.stringify(loadedData));
+    } else {
+      console.log('[useCategories] All sources failed/empty');
+      setCategories([]);
+    }
     setIsLoaded(true);
   }, [getAuthToken]);
 

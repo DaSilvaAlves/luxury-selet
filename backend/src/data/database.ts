@@ -1,4 +1,5 @@
 import type { Product, Order, AdminUser, MonthlySales, Category } from '../types';
+import prisma from '../lib/prisma';
 
 // Admin user (senha: admin123)
 export const adminUsers: AdminUser[] = [
@@ -10,54 +11,40 @@ export const adminUsers: AdminUser[] = [
   }
 ];
 
-// Categories
-export let categories: Category[] = [
-  {
-    id: 'cat-1',
-    name: 'Perfumes Mulher',
-    slug: 'perfumes-mulher',
-    description: 'Fragrâncias femininas',
-    order: 1,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'cat-2',
-    name: 'Perfumes Homem',
-    slug: 'perfumes-homem',
-    description: 'Fragrâncias masculinas',
-    order: 2,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'cat-3',
-    name: 'Maquilhagem',
-    slug: 'maquilhagem',
-    description: 'Produtos de maquilhagem',
-    order: 3,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'cat-4',
-    name: 'Cuidados de Pele',
-    slug: 'cuidados-pele',
-    description: 'Cremes e tratamentos',
-    order: 4,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'cat-5',
-    name: 'Cabelos',
-    slug: 'cabelos',
-    description: 'Produtos capilares',
-    order: 5,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  },
-];
+// Categories - Now handled via Prisma
+export let categories: Category[] = [];
+
+// Initialize categories from DB
+export const initCategories = async () => {
+  try {
+    const dbCategories = await prisma.category.findMany({
+      orderBy: { order: 'asc' }
+    });
+
+    if (dbCategories.length === 0) {
+      // Seed default categories
+      const defaults = [
+        { name: 'Perfumes Mulher', slug: 'perfumes-mulher', description: 'Fragrâncias femininas', order: 1 },
+        { name: 'Perfumes Homem', slug: 'perfumes-homem', description: 'Fragrâncias masculinas', order: 2 },
+        { name: 'Maquilhagem', slug: 'maquilhagem', description: 'Produtos de maquilhagem', order: 3 },
+        { name: 'Cuidados de Pele', slug: 'cuidados-pele', description: 'Cremes e tratamentos', order: 4 },
+        { name: 'Cabelos', slug: 'cabelos', description: 'Produtos capilares', order: 5 },
+      ];
+
+      for (const cat of defaults) {
+        await prisma.category.create({ data: cat });
+      }
+
+      categories = await prisma.category.findMany({ orderBy: { order: 'asc' } }) as any;
+    } else {
+      categories = dbCategories as any;
+    }
+    return categories;
+  } catch (error) {
+    console.error('Error initializing categories:', error);
+    return [];
+  }
+};
 
 // Products
 export let products: Product[] = [
@@ -218,7 +205,7 @@ export const getProductById = (id: string): Product | undefined => {
 export const updateProduct = (id: string, updates: Partial<Product>): Product | null => {
   const index = products.findIndex(p => p.id === id);
   if (index === -1) return null;
-  
+
   products[index] = { ...products[index], ...updates };
   return products[index];
 };
@@ -231,7 +218,7 @@ export const addOrder = (order: Order): Order => {
 export const updateOrder = (id: string, updates: Partial<Order>): Order | null => {
   const index = orders.findIndex(o => o.id === id);
   if (index === -1) return null;
-  
+
   orders[index] = { ...orders[index], ...updates, updatedAt: new Date().toISOString() };
   return orders[index];
 };
@@ -250,32 +237,57 @@ export const updateMonthlySales = (month: string, year: number, amount: number, 
 };
 
 // Category management
-export const getCategoryById = (id: string): Category | undefined => {
-  return categories.find(c => c.id === id);
+export const getCategories = async (): Promise<Category[]> => {
+  const dbCategories = await prisma.category.findMany({
+    orderBy: { order: 'asc' }
+  });
+  categories = dbCategories as any;
+  return categories;
 };
 
-export const addCategory = (category: Omit<Category, 'id' | 'createdAt'>): Category => {
-  const newCategory: Category = {
-    ...category,
-    id: `cat-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-  };
-  categories.push(newCategory);
-  return newCategory;
+export const getCategoryById = async (id: string): Promise<Category | null> => {
+  return await prisma.category.findUnique({
+    where: { id }
+  }) as Category | null;
 };
 
-export const updateCategory = (id: string, updates: Partial<Category>): Category | null => {
-  const index = categories.findIndex(c => c.id === id);
-  if (index === -1) return null;
-
-  categories[index] = { ...categories[index], ...updates };
-  return categories[index];
+export const addCategory = async (category: Omit<Category, 'id' | 'createdAt'>): Promise<Category> => {
+  const newCategory = await prisma.category.create({
+    data: {
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      order: category.order,
+      isActive: category.isActive,
+    }
+  });
+  await getCategories(); // Sync local cache
+  return newCategory as any;
 };
 
-export const deleteCategory = (id: string): boolean => {
-  const index = categories.findIndex(c => c.id === id);
-  if (index === -1) return false;
+export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
+  const updated = await prisma.category.update({
+    where: { id },
+    data: {
+      name: updates.name,
+      slug: updates.slug,
+      description: updates.description,
+      order: updates.order,
+      isActive: updates.isActive,
+    }
+  });
+  await getCategories(); // Sync local cache
+  return updated as any;
+};
 
-  categories.splice(index, 1);
-  return true;
+export const deleteCategory = async (id: string): Promise<boolean> => {
+  try {
+    await prisma.category.delete({
+      where: { id }
+    });
+    await getCategories(); // Sync local cache
+    return true;
+  } catch (error) {
+    return false;
+  }
 };

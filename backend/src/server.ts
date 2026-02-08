@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { products, orders, monthlySales, adminUsers, categories, addOrder, updateOrder, updateProduct, updateMonthlySales, addCategory, updateCategory, deleteCategory, getCategoryById } from './data/database';
+import { products, orders, monthlySales, adminUsers, categories, addOrder, updateOrder, updateProduct, updateMonthlySales, addCategory, updateCategory, deleteCategory, getCategoryById, initCategories, getCategories } from './data/database';
 import type { Order, CustomerData, PaymentMethod } from './types';
 
 dotenv.config();
@@ -97,7 +97,7 @@ app.post('/api/admin/login', (req, res) => {
 app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
   const currentMonth = new Date().toLocaleString('pt-PT', { month: 'long' });
   const currentYear = new Date().getFullYear();
-  
+
   const monthSales = monthlySales.find(
     s => s.month.toLowerCase() === currentMonth.toLowerCase() && s.year === currentYear
   ) || { month: currentMonth, year: currentYear, amount: 0 };
@@ -153,34 +153,35 @@ app.put('/api/admin/products/:id', authenticateToken, (req, res) => {
 // ========== CATEGORIES MANAGEMENT ==========
 
 // Get all categories
-app.get('/api/admin/categories', authenticateToken, (req, res) => {
-  res.json(categories);
+app.get('/api/admin/categories', authenticateToken, async (req, res) => {
+  const allCategories = await getCategories();
+  res.json(allCategories);
 });
 
 // Create category
-app.post('/api/admin/categories', authenticateToken, (req, res) => {
+app.post('/api/admin/categories', authenticateToken, async (req, res) => {
   const { name, slug, description, isActive, order } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Category name is required' });
   }
 
-  const newCategory = addCategory({
+  const newCategory = await addCategory({
     name,
     slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
     description,
     isActive: isActive ?? true,
-    order: order ?? categories.length + 1,
+    order: order ?? (await getCategories()).length + 1,
   });
 
   res.status(201).json(newCategory);
 });
 
 // Update category
-app.put('/api/admin/categories/:id', authenticateToken, (req, res) => {
+app.put('/api/admin/categories/:id', authenticateToken, async (req, res) => {
   const { name, slug, description, isActive, order } = req.body;
 
-  const updated = updateCategory(req.params.id, {
+  const updated = await updateCategory(req.params.id, {
     name,
     slug,
     description,
@@ -196,8 +197,8 @@ app.put('/api/admin/categories/:id', authenticateToken, (req, res) => {
 });
 
 // Delete category
-app.delete('/api/admin/categories/:id', authenticateToken, (req, res) => {
-  const deleted = deleteCategory(req.params.id);
+app.delete('/api/admin/categories/:id', authenticateToken, async (req, res) => {
+  const deleted = await deleteCategory(req.params.id);
 
   if (!deleted) {
     return res.status(404).json({ error: 'Category not found' });
@@ -225,9 +226,9 @@ app.get('/api/admin/orders/:id', authenticateToken, (req, res) => {
 // Update order status
 app.patch('/api/admin/orders/:id/status', authenticateToken, (req, res) => {
   const { status, notes } = req.body;
-  
+
   const updated = updateOrder(req.params.id, { status, notes });
-  
+
   if (!updated) {
     return res.status(404).json({ error: 'Order not found' });
   }
@@ -241,8 +242,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📦 Products loaded: ${products.length}`);
-  console.log(`🔐 Admin login: admin / admin123`);
-});
+const startServer = async () => {
+  await initCategories();
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📦 Categories initialized: ${categories.length}`);
+    console.log(`🔐 Admin login: admin / admin123`);
+  });
+};
+
+startServer();
