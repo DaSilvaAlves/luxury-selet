@@ -110,41 +110,57 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) {
       alert('Preencha todos os campos obrigatórios');
       return;
     }
 
-    addProduct({
-      name: newProduct.name,
-      price: newProduct.price,
-      originalPrice: newProduct.originalPrice,
-      image: newProduct.image || '/images/placeholder.jpg',
-      categoryId: newProduct.categoryId,
-      availability: newProduct.availability || 'pronta-entrega',
-      description: newProduct.description,
-      inStock: newProduct.inStock ?? true,
-      isActive: newProduct.isActive ?? true,
-    });
+    try {
+      const result = await addProduct({
+        name: newProduct.name,
+        price: newProduct.price,
+        originalPrice: newProduct.originalPrice,
+        image: newProduct.image || '/images/placeholder.jpg',
+        categoryId: newProduct.categoryId,
+        availability: newProduct.availability || 'pronta-entrega',
+        description: newProduct.description,
+        inStock: newProduct.inStock ?? true,
+        isActive: newProduct.isActive ?? true,
+        isFeatured: newProduct.isFeatured ?? false,
+      });
 
-    setNewProduct({
-      name: '',
-      price: 0,
-      image: '',
-      categoryId: '',
-      availability: 'pronta-entrega',
-      description: '',
-      inStock: true,
-      isActive: true,
-    });
-    setIsAddingProduct(false);
+      if (result) {
+        setNewProduct({
+          name: '',
+          price: 0,
+          image: '',
+          categoryId: '',
+          availability: 'pronta-entrega',
+          description: '',
+          inStock: true,
+          isActive: true,
+          isFeatured: false,
+        });
+        setIsAddingProduct(false);
+      } else {
+        alert('Erro ao criar produto. Verifique a ligação ao servidor.');
+      }
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Erro ao guardar produto.');
+    }
   };
 
-  const handleUpdateProduct = () => {
+  const handleUpdateProduct = async () => {
     if (!editingProduct) return;
-    updateProduct(editingProduct.id, editingProduct);
-    setEditingProduct(null);
+    try {
+      await updateProduct(editingProduct.id, editingProduct);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Error updating product:', error);
+      alert('Erro ao atualizar produto.');
+    }
   };
 
   const handleSaveCategory = async () => {
@@ -247,22 +263,20 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
         <nav className="px-4 flex-1">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-              activeTab === 'dashboard'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard'
                 ? 'bg-gold-50 text-gold-700'
                 : 'text-sage-600 hover:bg-sage-50'
-            }`}
+              }`}
           >
             <LayoutDashboard className="w-5 h-5" />
             Dashboard
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${
-              activeTab === 'categories'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'categories'
                 ? 'bg-gold-50 text-gold-700'
                 : 'text-sage-600 hover:bg-sage-50'
-            }`}
+              }`}
           >
             <FolderOpen className="w-5 h-5" />
             Categorias
@@ -272,11 +286,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${
-              activeTab === 'products'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'products'
                 ? 'bg-gold-50 text-gold-700'
                 : 'text-sage-600 hover:bg-sage-50'
-            }`}
+              }`}
           >
             <Package className="w-5 h-5" />
             Produtos
@@ -286,11 +299,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           </button>
           <button
             onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${
-              activeTab === 'settings'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 ${activeTab === 'settings'
                 ? 'bg-gold-50 text-gold-700'
                 : 'text-sage-600 hover:bg-sage-50'
-            }`}
+              }`}
           >
             <Settings className="w-5 h-5" />
             Definições
@@ -446,9 +458,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                               Destaque
                             </span>
                           )}
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
                             {product.isActive ? 'Ativo' : 'Inativo'}
                           </span>
                           <span className="text-sage-900 font-medium">
@@ -456,11 +467,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           </span>
                           <button
                             onClick={() => setFeaturedProduct(product.id)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              product.isFeatured
+                            className={`p-2 rounded-lg transition-colors ${product.isFeatured
                                 ? 'text-amber-500 bg-amber-50'
                                 : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
-                            }`}
+                              }`}
                             title={product.isFeatured ? 'Produto em destaque' : 'Colocar em destaque'}
                           >
                             <Star className={`w-4 h-4 ${product.isFeatured ? 'fill-current' : ''}`} />
@@ -526,9 +536,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            category.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${category.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
                             {category.isActive ? 'Ativa' : 'Inativa'}
                           </span>
                           <button
@@ -628,11 +637,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                             <td className="px-6 py-4">
                               <button
                                 onClick={() => toggleProductActive(product.id)}
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                                  product.isActive
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${product.isActive
                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
+                                  }`}
                               >
                                 {product.isActive ? (
                                   <>
@@ -651,11 +659,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => setFeaturedProduct(product.id)}
-                                  className={`p-2 rounded-lg transition-colors ${
-                                    product.isFeatured
+                                  className={`p-2 rounded-lg transition-colors ${product.isFeatured
                                       ? 'text-amber-500 bg-amber-50'
                                       : 'text-sage-400 hover:text-amber-500 hover:bg-amber-50'
-                                  }`}
+                                    }`}
                                   title={product.isFeatured ? 'Produto em destaque' : 'Colocar em destaque na capa'}
                                 >
                                   <Star className={`w-4 h-4 ${product.isFeatured ? 'fill-current' : ''}`} />
@@ -699,11 +706,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           {activeTab === 'settings' && (
             <div className="space-y-6">
               {importMessage && (
-                <div className={`p-4 rounded-xl ${
-                  importMessage.includes('sucesso') || importMessage.includes('Importados')
+                <div className={`p-4 rounded-xl ${importMessage.includes('sucesso') || importMessage.includes('Importados')
                     ? 'bg-green-50 text-green-700 border border-green-200'
                     : 'bg-red-50 text-red-700 border border-red-200'
-                }`}>
+                  }`}>
                   {importMessage}
                 </div>
               )}
@@ -768,11 +774,10 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 )}
 
                 {credentialsMessage && (
-                  <div className={`p-4 rounded-xl mb-4 ${
-                    credentialsMessage.success
+                  <div className={`p-4 rounded-xl mb-4 ${credentialsMessage.success
                       ? 'bg-green-50 text-green-700 border border-green-200'
                       : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
+                    }`}>
                     {credentialsMessage.text}
                   </div>
                 )}

@@ -4,11 +4,15 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
-  category: 'perfumes' | 'maquilhagem' | 'cremes';
+  category: string;
+  categoryId: string;
   availability: 'pronta-entrega' | 'por-encomenda';
   description?: string;
   inStock: boolean;
   isActive: boolean;
+  isFeatured: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {

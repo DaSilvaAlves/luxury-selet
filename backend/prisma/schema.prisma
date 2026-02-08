@@ -34,6 +34,7 @@ model Product {
   description   String?
   inStock       Boolean        @default(true)
   isActive      Boolean        @default(true)
+  isFeatured    Boolean        @default(false) @map("is_featured")
 
   @@map("products")
 }

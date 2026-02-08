@@ -46,142 +46,89 @@ export const initCategories = async () => {
   }
 };
 
-// Products
-export let products: Product[] = [
-  {
-    id: 'malbec-gold',
-    name: 'Malbec Gold Desodorante',
-    price: 18.90,
-    image: '/images/products/malbec_gold.jpg',
-    category: 'perfumes',
-    availability: 'pronta-entrega',
-    description: 'Desodorante colônia masculino com notas amadeiradas e especiadas.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'coffee-woman',
-    name: 'Coffee Woman Seduction',
-    price: 22.00,
-    image: '/images/products/coffee_woman.jpg',
-    category: 'perfumes',
-    availability: 'pronta-entrega',
-    description: 'Fragrância feminina sensual com notas de café e baunilha.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'match-revitalizante',
-    name: 'Match Revitalizante',
-    price: 19.50,
-    image: '/images/products/match_revitalizante.jpg',
-    category: 'cremes',
-    availability: 'pronta-entrega',
-    description: 'Creme facial revitalizante com extratos botânicos.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'lily-creme',
-    name: 'Lily Creme Acetinado',
-    price: 15.00,
-    image: '/images/products/lily_creme.jpg',
-    category: 'cremes',
-    availability: 'pronta-entrega',
-    description: 'Hidratante corporal com fragrância floral delicada.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'egeo-dolce',
-    name: 'Egeo Dolce',
-    price: 21.00,
-    image: '/images/products/egeo_dolce.jpg',
-    category: 'perfumes',
-    availability: 'pronta-entrega',
-    description: 'Colônia feminina doce e envolvente.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'botica-dark-mint',
-    name: 'Botica 214 Dark Mint',
-    price: 45.00,
-    image: '/images/products/botica_dark_mint.jpg',
-    category: 'perfumes',
-    availability: 'pronta-entrega',
-    description: 'Eau de Parfum refrescante com notas de menta e especiarias.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'botica-vetiver',
-    name: 'Botica 214 Vetiver',
-    price: 52.00,
-    image: '/images/products/botica_vetiver.jpg',
-    category: 'perfumes',
-    availability: 'por-encomenda',
-    description: 'Eau de Parfum sofisticado com notas amadeiradas de vetiver.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'lily-absolu',
-    name: 'Lily Absolu',
-    price: 58.00,
-    image: '/images/products/lily_absolu.jpg',
-    category: 'perfumes',
-    availability: 'por-encomenda',
-    description: 'Fragrância floral intensa e sofisticada.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'kit-coffee',
-    name: 'Kit Presente Coffee',
-    price: 34.00,
-    originalPrice: 42.00,
-    image: '/images/products/kit_coffee.jpg',
-    category: 'cremes',
-    availability: 'por-encomenda',
-    description: 'Kit completo com produtos da linha Coffee.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'egeo-vanilla',
-    name: 'Egeo Vanilla',
-    price: 24.00,
-    image: '/images/products/egeo_vanilla.jpg',
-    category: 'perfumes',
-    availability: 'por-encomenda',
-    description: 'Colônia com notas quentes de baunilha e caramelo.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'malbec-x',
-    name: 'Malbec X',
-    price: 48.00,
-    image: '/images/products/malbec_x.jpg',
-    category: 'perfumes',
-    availability: 'por-encomenda',
-    description: 'Fragrância masculina intensa e marcante.',
-    inStock: true,
-    isActive: true,
-  },
-  {
-    id: 'match-micelar',
-    name: 'Match Água Micelar',
-    price: 16.00,
-    image: '/images/products/match_micelar.jpg',
-    category: 'maquilhagem',
-    availability: 'por-encomenda',
-    description: 'Água micelar demaquilante para todos os tipos de pele.',
-    inStock: true,
-    isActive: true,
-  },
-];
+// Products - Now handled via Prisma
+export let products: Product[] = [];
+
+// Initialize products from DB
+export const initProducts = async () => {
+  try {
+    const dbProducts = await prisma.product.findMany({
+      orderBy: { name: 'asc' }
+    });
+
+    if (dbProducts.length === 0) {
+      // Get categories to link products
+      const dbCategories = await prisma.category.findMany();
+      const catMap: Record<string, string> = {};
+      dbCategories.forEach((c: any) => {
+        catMap[c.slug] = c.id;
+      });
+
+      // Seed default products
+      const defaults = [
+        {
+          name: 'Malbec Gold Desodorante',
+          price: 18.90,
+          image: '/images/products/malbec_gold.jpg',
+          categoryName: 'perfumes',
+          categoryId: catMap['perfumes-mulher'] || catMap['perfumes-homem'],
+          availability: 'pronta-entrega',
+          description: 'Desodorante colônia masculino com notas amadeiradas e especiadas.',
+          inStock: true,
+          isActive: true,
+          isFeatured: false,
+        },
+        {
+          name: 'Coffee Woman Seduction',
+          price: 22.00,
+          image: '/images/products/coffee_woman.jpg',
+          categoryName: 'perfumes',
+          categoryId: catMap['perfumes-mulher'],
+          availability: 'pronta-entrega',
+          description: 'Fragrância feminina sensual com notas de café e baunilha.',
+          inStock: true,
+          isActive: true,
+          isFeatured: true,
+        },
+        // Adicionar outros se necessário mas estes já servem de exemplo
+      ];
+
+      for (const prod of defaults) {
+        if (prod.categoryId) {
+          await prisma.product.create({ data: prod as any });
+        }
+      }
+
+      products = await getProducts() as any;
+    } else {
+      products = dbProducts.map(mapDbToProduct) as any;
+    }
+    return products;
+  } catch (error) {
+    console.error('Error initializing products:', error);
+    return [];
+  }
+};
+
+// Helper to map DB Product to interface Product
+const mapDbToProduct = (dbProduct: any): Product => {
+  return {
+    id: dbProduct.id,
+    name: dbProduct.name,
+    price: dbProduct.price,
+    originalPrice: dbProduct.originalPrice || undefined,
+    image: dbProduct.image,
+    category: dbProduct.categoryName,
+    categoryId: dbProduct.categoryId,
+    availability: dbProduct.availability as any,
+    description: dbProduct.description || undefined,
+    inStock: dbProduct.inStock,
+    isActive: dbProduct.isActive,
+    isFeatured: dbProduct.isFeatured,
+    createdAt: dbProduct.createdAt?.toISOString() || new Date().toISOString(),
+    updatedAt: dbProduct.updatedAt?.toISOString(),
+  };
+};
 
 // Orders
 export let orders: Order[] = [];
@@ -198,16 +145,73 @@ export let monthlySales: MonthlySales[] = [
 ];
 
 // Helper functions
-export const getProductById = (id: string): Product | undefined => {
-  return products.find(p => p.id === id);
+export const getProducts = async (): Promise<Product[]> => {
+  const dbProducts = await prisma.product.findMany({
+    orderBy: { name: 'asc' }
+  });
+  products = dbProducts.map(mapDbToProduct) as any;
+  return products;
 };
 
-export const updateProduct = (id: string, updates: Partial<Product>): Product | null => {
-  const index = products.findIndex(p => p.id === id);
-  if (index === -1) return null;
+export const getProductById = async (id: string): Promise<Product | null> => {
+  const dbProduct = await prisma.product.findUnique({
+    where: { id }
+  });
+  return dbProduct ? mapDbToProduct(dbProduct) : null;
+};
 
-  products[index] = { ...products[index], ...updates };
-  return products[index];
+export const addProduct = async (product: Omit<Product, 'id' | 'createdAt'>): Promise<Product> => {
+  const dbProduct = await prisma.product.create({
+    data: {
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.image,
+      categoryName: product.category || '',
+      categoryId: product.categoryId,
+      availability: product.availability as any,
+      description: product.description,
+      inStock: product.inStock,
+      isActive: product.isActive,
+      isFeatured: product.isFeatured || false,
+    }
+  });
+  await getProducts(); // Sync cache
+  return mapDbToProduct(dbProduct);
+};
+
+export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
+  const data: any = {};
+  if (updates.name !== undefined) data.name = updates.name;
+  if (updates.price !== undefined) data.price = updates.price;
+  if (updates.originalPrice !== undefined) data.originalPrice = updates.originalPrice;
+  if (updates.image !== undefined) data.image = updates.image;
+  if (updates.category !== undefined) data.categoryName = updates.category;
+  if (updates.categoryId !== undefined) data.categoryId = updates.categoryId;
+  if (updates.availability !== undefined) data.availability = updates.availability;
+  if (updates.description !== undefined) data.description = updates.description;
+  if (updates.inStock !== undefined) data.inStock = updates.inStock;
+  if (updates.isActive !== undefined) data.isActive = updates.isActive;
+  if (updates.isFeatured !== undefined) data.isFeatured = updates.isFeatured;
+
+  const dbProduct = await prisma.product.update({
+    where: { id },
+    data
+  });
+  await getProducts(); // Sync cache
+  return mapDbToProduct(dbProduct);
+};
+
+export const deleteProduct = async (id: string): Promise<boolean> => {
+  try {
+    await prisma.product.delete({
+      where: { id }
+    });
+    await getProducts(); // Sync cache
+    return true;
+  } catch (error) {
+    return false;
+  }
 };
 
 export const addOrder = (order: Order): Order => {

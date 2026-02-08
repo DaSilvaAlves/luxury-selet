@@ -37,31 +37,83 @@ function productToDb(product: Partial<Product>): any {
   return row;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const getAuthToken = () => localStorage.getItem('luxury-selet-token');
+
+// Helper to map DB Product (API) to interface Product
+function apiToProduct(p: any): Product {
+  return {
+    ...p,
+    price: Number(p.price),
+    originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+  };
+}
+
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load products from Supabase
+  // Load products from Backend API first, then Supabase, then localStorage
   const loadProducts = useCallback(async () => {
+    console.log('[useProducts] Loading products...');
+    let loadedData: Product[] | null = null;
+
+    // 1. Try Backend API first
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading products:', error);
-        return;
-      }
-
-      if (data) {
-        setProducts(data.map(dbToProduct));
+      console.log('[useProducts] Trying Backend API...');
+      const response = await fetch(`${API_URL}/api/products`);
+      if (response.ok) {
+        const data = await response.json();
+        loadedData = data.map(apiToProduct);
+        console.log('[useProducts] Loaded from Backend:', loadedData?.length || 0, 'products');
       }
     } catch (error) {
-      console.error('Error loading products:', error);
-    } finally {
-      setIsLoaded(true);
+      console.warn('[useProducts] Backend API error:', error);
     }
+
+    // 2. Try Supabase if Backend failed or returned no products
+    if (!loadedData || loadedData.length === 0) {
+      try {
+        console.log('[useProducts] Trying Supabase...');
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (data) {
+          loadedData = data.map(dbToProduct);
+          console.log('[useProducts] Loaded from Supabase:', loadedData.length, 'products');
+        }
+      } catch (error) {
+        console.warn('[useProducts] Supabase error:', error);
+      }
+    }
+
+    // 3. Fallback to localStorage as last resort
+    if (!loadedData || loadedData.length === 0) {
+      try {
+        console.log('[useProducts] Trying localStorage fallback...');
+        const stored = localStorage.getItem('luxury-selet-products');
+        if (stored) {
+          loadedData = JSON.parse(stored) as Product[];
+          console.log('[useProducts] Loaded from localStorage:', loadedData.length, 'products');
+        }
+      } catch (error) {
+        console.warn('[useProducts] localStorage error:', error);
+      }
+    }
+
+    // Finalize
+    if (loadedData) {
+      setProducts(loadedData);
+      localStorage.setItem('luxury-selet-products', JSON.stringify(loadedData));
+    } else {
+      console.log('[useProducts] All sources failed/empty');
+      setProducts([]);
+    }
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -69,60 +121,92 @@ export function useProducts() {
   }, [loadProducts]);
 
   const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt'>) => {
-    const dbRow = productToDb(product);
+    try {
+      const token = getAuthToken();
+      if (!token) throw new Error('No auth token');
 
-    const { data, error } = await supabase
-      .from('products')
-      .insert([dbRow])
-      .select()
-      .single();
+      const response = await fetch(`${API_URL}/api/admin/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(product)
+      });
 
-    if (error) {
-      console.error('Error adding product:', error);
-      return null;
-    }
+      if (!response.ok) throw new Error('Failed to add product to backend');
 
-    if (data) {
-      const newProduct = dbToProduct(data);
+      const newProduct = await response.json();
       setProducts(prev => [newProduct, ...prev]);
       return newProduct;
+    } catch (error) {
+      console.error('[useProducts] Error adding product:', error);
+      // Fallback to Supabase for emergency write
+      const dbRow = productToDb(product);
+      const { data, error: sbError } = await supabase.from('products').insert([dbRow]).select().single();
+      if (sbError) return null;
+      if (data) {
+        const newProduct = dbToProduct(data);
+        setProducts(prev => [newProduct, ...prev]);
+        return newProduct;
+      }
+      return null;
     }
-    return null;
   }, []);
 
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
-    const dbUpdates = productToDb(updates);
+    try {
+      const token = getAuthToken();
+      if (!token) throw new Error('No auth token');
 
-    const { data, error } = await supabase
-      .from('products')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select()
-      .single();
+      const response = await fetch(`${API_URL}/api/admin/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
 
-    if (error) {
-      console.error('Error updating product:', error);
-      return;
-    }
+      if (!response.ok) throw new Error('Failed to update product on backend');
 
-    if (data) {
-      const updatedProduct = dbToProduct(data);
+      const updatedProduct = await response.json();
       setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
+    } catch (error) {
+      console.error('[useProducts] Error updating product:', error);
+      // Fallback to Supabase
+      const dbUpdates = productToDb(updates);
+      const { data, error: sbError } = await supabase.from('products').update(dbUpdates).eq('id', id).select().single();
+      if (!sbError && data) {
+        const updatedProduct = dbToProduct(data);
+        setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
+      }
     }
   }, []);
 
   const deleteProduct = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
+    try {
+      const token = getAuthToken();
+      if (!token) throw new Error('No auth token');
 
-    if (error) {
-      console.error('Error deleting product:', error);
-      return;
+      const response = await fetch(`${API_URL}/api/admin/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete product from backend');
+
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('[useProducts] Error deleting product:', error);
+      // Fallback
+      const { error: sbError } = await supabase.from('products').delete().eq('id', id);
+      if (!sbError) {
+        setProducts(prev => prev.filter(p => p.id !== id));
+      }
     }
-
-    setProducts(prev => prev.filter(p => p.id !== id));
   }, []);
 
   const getProductsByCategory = useCallback((categoryId: string) => {
@@ -156,32 +240,36 @@ export function useProducts() {
   }, [products, updateProduct]);
 
   const setFeaturedProduct = useCallback(async (id: string) => {
-    // First, remove featured from all products
-    const { error: resetError } = await supabase
-      .from('products')
-      .update({ is_featured: false })
-      .neq('id', id);
+    try {
+      const token = getAuthToken();
+      if (!token) throw new Error('No auth token');
 
-    if (resetError) {
-      console.error('Error resetting featured:', resetError);
+      const response = await fetch(`${API_URL}/api/admin/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ isFeatured: true })
+      });
+
+      if (!response.ok) throw new Error('Failed to set featured on backend');
+
+      // Update local state
+      setProducts(prev => prev.map(prod => ({
+        ...prod,
+        isFeatured: prod.id === id,
+      })));
+    } catch (error) {
+      console.error('[useProducts] Error setting featured:', error);
+      // Fallback
+      await supabase.from('products').update({ is_featured: false }).neq('id', id);
+      await supabase.from('products').update({ is_featured: true }).eq('id', id);
+      setProducts(prev => prev.map(prod => ({
+        ...prod,
+        isFeatured: prod.id === id,
+      })));
     }
-
-    // Then set the selected product as featured
-    const { error } = await supabase
-      .from('products')
-      .update({ is_featured: true })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error setting featured:', error);
-      return;
-    }
-
-    // Update local state
-    setProducts(prev => prev.map(prod => ({
-      ...prod,
-      isFeatured: prod.id === id,
-    })));
   }, []);
 
   const getFeaturedProduct = useCallback(() => {

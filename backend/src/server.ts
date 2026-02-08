@@ -3,7 +3,28 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { products, orders, monthlySales, adminUsers, categories, addOrder, updateOrder, updateProduct, updateMonthlySales, addCategory, updateCategory, deleteCategory, getCategoryById, initCategories, getCategories } from './data/database';
+import {
+  products,
+  orders,
+  monthlySales,
+  adminUsers,
+  categories,
+  addOrder,
+  updateOrder,
+  updateProduct,
+  addProduct,
+  deleteProduct,
+  updateMonthlySales,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  getCategoryById,
+  initCategories,
+  initProducts,
+  getCategories,
+  getProducts,
+  getProductById
+} from './data/database';
 import type { Order, CustomerData, PaymentMethod } from './types';
 
 dotenv.config();
@@ -37,14 +58,15 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
 // ========== PUBLIC ROUTES ==========
 
 // Get all products
-app.get('/api/products', (req, res) => {
-  const activeProducts = products.filter(p => p.isActive);
+app.get('/api/products', async (req, res) => {
+  const allProducts = await getProducts();
+  const activeProducts = allProducts.filter(p => p.isActive);
   res.json(activeProducts);
 });
 
 // Get product by ID
-app.get('/api/products/:id', (req, res) => {
-  const product = products.find(p => p.id === req.params.id);
+app.get('/api/products/:id', async (req, res) => {
+  const product = await getProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: 'Product not found' });
   }
@@ -128,26 +150,42 @@ app.put('/api/admin/sales', authenticateToken, (req, res) => {
 // ========== PRODUCTS MANAGEMENT ==========
 
 // Get all products (admin)
-app.get('/api/admin/products', authenticateToken, (req, res) => {
-  res.json(products);
+app.get('/api/admin/products', authenticateToken, async (req, res) => {
+  const allProducts = await getProducts();
+  res.json(allProducts);
+});
+
+// Create product
+app.post('/api/admin/products', authenticateToken, async (req, res) => {
+  try {
+    const newProduct = await addProduct(req.body);
+    res.status(201).json(newProduct);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao criar produto' });
+  }
 });
 
 // Update product
-app.put('/api/admin/products/:id', authenticateToken, (req, res) => {
-  const { price, originalPrice, inStock, isActive } = req.body;
-
-  const updated = updateProduct(req.params.id, {
-    price,
-    originalPrice,
-    inStock,
-    isActive,
-  });
-
-  if (!updated) {
-    return res.status(404).json({ error: 'Product not found' });
+app.put('/api/admin/products/:id', authenticateToken, async (req, res) => {
+  try {
+    const updated = await updateProduct(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar produto' });
   }
+});
 
-  res.json(updated);
+// Delete product
+app.delete('/api/admin/products/:id', authenticateToken, async (req, res) => {
+  const success = await deleteProduct(req.params.id);
+  if (success) {
+    res.status(204).send();
+  } else {
+    res.status(404).json({ error: 'Produto não encontrado' });
+  }
 });
 
 // ========== CATEGORIES MANAGEMENT ==========
@@ -244,9 +282,11 @@ app.get('/api/health', (req, res) => {
 // Start server
 const startServer = async () => {
   await initCategories();
+  await initProducts();
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📦 Categories initialized: ${categories.length}`);
+    console.log(`🏷️ Products initialized: ${products.length}`);
     console.log(`🔐 Admin login: admin / admin123`);
   });
 };
