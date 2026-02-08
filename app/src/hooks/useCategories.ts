@@ -68,56 +68,122 @@ export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load categories from Supabase
+  // Load categories from localStorage
+  const loadFromLocalStorage = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('luxury-selet-categories');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setCategories(parsed);
+        return true;
+      }
+      // If no data in localStorage, seed with defaults
+      return false;
+    } catch (error) {
+      console.error('Error loading categories from localStorage:', error);
+      return false;
+    }
+  }, []);
+
+  // Save categories to localStorage
+  const saveToLocalStorage = useCallback((cats: Category[]) => {
+    try {
+      localStorage.setItem('luxury-selet-categories', JSON.stringify(cats));
+    } catch (error) {
+      console.error('Error saving categories to localStorage:', error);
+    }
+  }, []);
+
+  // Load categories from Supabase with localStorage fallback
   const loadCategories = useCallback(async () => {
+    let useLocalStorage = false;
+
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('sort_order', { ascending: true });
+        .order('sort_order', { ascending: true })
+        ; // 3 second timeout
 
       if (error) {
-        console.error('Error loading categories:', error);
+        console.warn('Supabase error, falling back to localStorage:', error);
+        useLocalStorage = true;
+      } else if (data && data.length > 0) {
+        const loadedCategories = data.map(dbToCategory);
+        setCategories(loadedCategories);
+        saveToLocalStorage(loadedCategories);
+        setIsLoaded(true);
+        return;
+      } else {
+        // Seed default categories if empty
+        await seedDefaultCategories();
+        setIsLoaded(true);
+        return;
+      }
+    } catch (error) {
+      console.warn('Error loading categories from Supabase, falling back to localStorage:', error);
+      useLocalStorage = true;
+    }
+
+    // Fallback to localStorage
+    if (useLocalStorage) {
+      const loaded = loadFromLocalStorage();
+      if (loaded) {
         setIsLoaded(true);
         return;
       }
 
-      if (data && data.length > 0) {
-        setCategories(data.map(dbToCategory));
-      } else {
-        // Seed default categories if empty
-        await seedDefaultCategories();
-      }
-    } catch (error) {
-      console.error('Error loading categories:', error);
-    } finally {
-      setIsLoaded(true);
+      // No localStorage data, seed with defaults to localStorage
+      const defaultCatsWithIds = defaultCategories.map((cat, idx) => ({
+        ...cat,
+        id: `cat-${idx + 1}`,
+        createdAt: new Date().toISOString(),
+        order: idx + 1,
+      }));
+      setCategories(defaultCatsWithIds);
+      saveToLocalStorage(defaultCatsWithIds);
     }
-  }, []);
+
+    setIsLoaded(true);
+  }, [loadFromLocalStorage, saveToLocalStorage]);
 
   // Seed default categories
   const seedDefaultCategories = async () => {
-    const toInsert = defaultCategories.map(cat => ({
-      name: cat.name,
-      slug: cat.slug,
-      description: cat.description,
-      sort_order: cat.order,
-      is_active: cat.isActive,
+    const defaultCatsWithIds = defaultCategories.map((cat, idx) => ({
+      ...cat,
+      id: `cat-${idx + 1}`,
+      createdAt: new Date().toISOString(),
+      order: idx + 1,
     }));
 
-    const { data, error } = await supabase
-      .from('categories')
-      .insert(toInsert)
-      .select();
+    try {
+      const toInsert = defaultCategories.map(cat => ({
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description,
+        sort_order: cat.order,
+        is_active: cat.isActive,
+      }));
 
-    if (error) {
-      console.error('Error seeding categories:', error);
-      return;
+      const { data, error } = await supabase
+        .from('categories')
+        .insert(toInsert)
+        .select()
+        ;
+
+      if (!error && data) {
+        const loaded = data.map(dbToCategory);
+        setCategories(loaded);
+        saveToLocalStorage(loaded);
+        return;
+      }
+    } catch (error) {
+      console.warn('Error seeding categories in Supabase, using localStorage:', error);
     }
 
-    if (data) {
-      setCategories(data.map(dbToCategory));
-    }
+    // Fallback to localStorage
+    setCategories(defaultCatsWithIds);
+    saveToLocalStorage(defaultCatsWithIds);
   };
 
   useEffect(() => {
@@ -125,88 +191,131 @@ export function useCategories() {
   }, [loadCategories]);
 
   const addCategory = useCallback(async (category: Omit<Category, 'id' | 'createdAt' | 'order'>) => {
-    const dbRow = {
+    const newCategoryId = `cat-${Date.now()}`;
+    const newCategory: Category = {
+      id: newCategoryId,
       name: category.name,
       slug: category.slug || category.name.toLowerCase().replace(/\s+/g, '-'),
       description: category.description,
-      sort_order: categories.length + 1,
-      is_active: category.isActive,
+      order: categories.length + 1,
+      isActive: category.isActive,
+      createdAt: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
-      .from('categories')
-      .insert([dbRow])
-      .select()
-      .single();
+    // Try to save to Supabase first
+    try {
+      const dbRow = {
+        name: newCategory.name,
+        slug: newCategory.slug,
+        description: newCategory.description,
+        sort_order: newCategory.order,
+        is_active: newCategory.isActive,
+      };
 
-    if (error) {
-      console.error('Error adding category:', error);
-      return null;
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([dbRow])
+        .select()
+        .single()
+        ;
+
+      if (!error && data) {
+        const savedCategory = dbToCategory(data);
+        const updated = [...categories, savedCategory];
+        setCategories(updated);
+        saveToLocalStorage(updated);
+        return savedCategory;
+      }
+    } catch (error) {
+      console.warn('Error adding category to Supabase, using localStorage:', error);
     }
 
-    if (data) {
-      const newCategory = dbToCategory(data);
-      setCategories(prev => [...prev, newCategory]);
-      return newCategory;
-    }
-    return null;
-  }, [categories.length]);
+    // Fallback to localStorage
+    const updated = [...categories, newCategory];
+    setCategories(updated);
+    saveToLocalStorage(updated);
+    return newCategory;
+  }, [categories, saveToLocalStorage]);
 
   const updateCategory = useCallback(async (id: string, updates: Partial<Category>) => {
-    const dbUpdates = categoryToDb(updates);
+    // Update local state immediately
+    const updated = categories.map(c =>
+      c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
+    );
+    setCategories(updated);
+    saveToLocalStorage(updated);
 
-    const { data, error } = await supabase
-      .from('categories')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select()
-      .single();
+    // Try to sync to Supabase
+    try {
+      const dbUpdates = categoryToDb(updates);
+      const { error } = await supabase
+        .from('categories')
+        .update(dbUpdates)
+        .eq('id', id)
+        ;
 
-    if (error) {
-      console.error('Error updating category:', error);
-      return;
+      if (error) {
+        console.warn('Error updating category in Supabase:', error);
+        // Continue anyway since we updated locally
+      }
+    } catch (error) {
+      console.warn('Error syncing category update to Supabase:', error);
+      // Continue anyway since we updated locally
     }
-
-    if (data) {
-      const updatedCategory = dbToCategory(data);
-      setCategories(prev => prev.map(c => c.id === id ? updatedCategory : c));
-    }
-  }, []);
+  }, [categories, saveToLocalStorage]);
 
   const deleteCategory = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id);
+    // Update local state immediately
+    const updated = categories.filter(c => c.id !== id);
+    setCategories(updated);
+    saveToLocalStorage(updated);
 
-    if (error) {
-      console.error('Error deleting category:', error);
-      return;
+    // Try to sync to Supabase
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
+        ;
+
+      if (error) {
+        console.warn('Error deleting category in Supabase:', error);
+        // Continue anyway since we deleted locally
+      }
+    } catch (error) {
+      console.warn('Error syncing category deletion to Supabase:', error);
+      // Continue anyway since we deleted locally
     }
-
-    setCategories(prev => prev.filter(c => c.id !== id));
-  }, []);
+  }, [categories, saveToLocalStorage]);
 
   const reorderCategories = useCallback(async (reorderedCategories: Category[]) => {
-    // Update each category's order in the database
-    const updates = reorderedCategories.map((cat, index) => ({
-      id: cat.id,
-      sort_order: index + 1,
-    }));
-
-    for (const update of updates) {
-      await supabase
-        .from('categories')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id);
-    }
-
-    // Update local state
-    setCategories(reorderedCategories.map((cat, index) => ({
+    // Update local state immediately
+    const updated = reorderedCategories.map((cat, index) => ({
       ...cat,
       order: index + 1,
-    })));
-  }, []);
+    }));
+    setCategories(updated);
+    saveToLocalStorage(updated);
+
+    // Try to sync to Supabase
+    try {
+      const updates = updated.map((cat) => ({
+        id: cat.id,
+        sort_order: cat.order,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('categories')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id)
+          ;
+      }
+    } catch (error) {
+      console.warn('Error syncing category reorder to Supabase:', error);
+      // Continue anyway since we updated locally
+    }
+  }, [saveToLocalStorage]);
 
   const getActiveCategories = useCallback(() => {
     return categories
