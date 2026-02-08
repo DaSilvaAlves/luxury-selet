@@ -96,17 +96,18 @@ export function useCategories() {
 
   // Load categories from Supabase with localStorage fallback
   const loadCategories = useCallback(async () => {
+    console.log('[useCategories] Loading categories...');
     let useLocalStorage = false;
 
     try {
+      console.log('[useCategories] Attempting to load from Supabase...');
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('sort_order', { ascending: true })
-        ; // 3 second timeout
+        .order('sort_order', { ascending: true });
 
       if (error) {
-        console.warn('Supabase error, falling back to localStorage:', error);
+        console.warn('[useCategories] Supabase error, falling back to localStorage:', error);
         useLocalStorage = true;
       } else if (data && data.length > 0) {
         const loadedCategories = data.map(dbToCategory);
@@ -191,6 +192,7 @@ export function useCategories() {
   }, [loadCategories]);
 
   const addCategory = useCallback(async (category: Omit<Category, 'id' | 'createdAt' | 'order'>) => {
+    console.log('[useCategories] Adding category:', category);
     const newCategoryId = `cat-${Date.now()}`;
     const newCategory: Category = {
       id: newCategoryId,
@@ -216,24 +218,29 @@ export function useCategories() {
         .from('categories')
         .insert([dbRow])
         .select()
-        .single()
-        ;
+        .single();
 
       if (!error && data) {
+        console.log('[useCategories] Supabase success:', data);
         const savedCategory = dbToCategory(data);
         const updated = [...categories, savedCategory];
         setCategories(updated);
         saveToLocalStorage(updated);
         return savedCategory;
       }
+      if (error) {
+        console.warn('[useCategories] Supabase error:', error);
+      }
     } catch (error) {
-      console.warn('Error adding category to Supabase, using localStorage:', error);
+      console.warn('[useCategories] Supabase exception:', error);
     }
 
     // Fallback to localStorage
+    console.log('[useCategories] Using localStorage fallback for:', newCategory);
     const updated = [...categories, newCategory];
     setCategories(updated);
     saveToLocalStorage(updated);
+    console.log('[useCategories] Category added to localStorage, categories:', updated);
     return newCategory;
   }, [categories, saveToLocalStorage]);
 

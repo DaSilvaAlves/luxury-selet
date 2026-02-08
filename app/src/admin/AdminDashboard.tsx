@@ -34,6 +34,8 @@ type Tab = 'dashboard' | 'products' | 'categories' | 'settings';
 
 export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  console.log('[AdminDashboard] Initializing...');
+
   const {
     products,
     isLoaded: productsLoaded,
@@ -51,6 +53,8 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     deleteCategory,
     getCategoryById
   } = useCategories();
+
+  console.log('[AdminDashboard] Categories loaded:', { categoriesLoaded, count: categories.length, categories });
   const { exportData, importData } = useDataBackup();
   const { updateCredentials, isUsingDefaultCredentials, getCurrentUsername } = useAuth();
 
@@ -143,31 +147,45 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     setEditingProduct(null);
   };
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!newCategory.name) {
       alert('Preencha o nome da categoria');
       return;
     }
 
-    addCategory({
-      name: newCategory.name,
-      slug: newCategory.name.toLowerCase().replace(/\s+/g, '-'),
-      description: newCategory.description,
-      isActive: newCategory.isActive ?? true,
-    });
+    try {
+      const result = await addCategory({
+        name: newCategory.name,
+        slug: newCategory.name.toLowerCase().replace(/\s+/g, '-'),
+        description: newCategory.description,
+        isActive: newCategory.isActive ?? true,
+      });
 
-    setNewCategory({
-      name: '',
-      description: '',
-      isActive: true,
-    });
-    setIsAddingCategory(false);
+      if (result) {
+        setNewCategory({
+          name: '',
+          description: '',
+          isActive: true,
+        });
+        setIsAddingCategory(false);
+      } else {
+        alert('Erro ao criar categoria. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+      alert('Erro ao criar categoria: ' + (error instanceof Error ? error.message : 'Tente novamente'));
+    }
   };
 
-  const handleUpdateCategory = () => {
+  const handleUpdateCategory = async () => {
     if (!editingCategory) return;
-    updateCategory(editingCategory.id, editingCategory);
-    setEditingCategory(null);
+    try {
+      await updateCategory(editingCategory.id, editingCategory);
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Error updating category:', error);
+      alert('Erro ao atualizar categoria: ' + (error instanceof Error ? error.message : 'Tente novamente'));
+    }
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
