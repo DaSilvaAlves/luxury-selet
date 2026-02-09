@@ -9,7 +9,7 @@ interface AdminUser {
   user_id?: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = 'https://luxury-selet-production.up.railway.app';
 
 export function useAdminAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
