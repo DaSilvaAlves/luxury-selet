@@ -92,7 +92,7 @@ export function useAuth() {
       });
 
       return { success: true, message: 'Credenciais atualizadas com sucesso!' };
-    } catch (error) {
+    } catch {
       return { success: false, message: 'Erro ao guardar as credenciais.' };
     }
   }, [credentials.username]);

@@ -22,7 +22,7 @@ export function AdminLogin({ onLogin }: AdminLoginProps) {
       if (!success) {
         setError('Credenciais inválidas');
       }
-    } catch (err) {
+    } catch {
       setError('Erro ao fazer login');
     } finally {
       setIsLoading(false);

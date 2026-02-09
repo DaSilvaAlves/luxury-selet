@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react';
 import type { Product, CartItem } from '@/types';
 
@@ -14,21 +15,19 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Carregar do localStorage ao iniciar
-  useEffect(() => {
+  const [items, setItems] = useState<CartItem[]>(() => {
     const savedCart = localStorage.getItem('luxury_cart');
     if (savedCart) {
       try {
-        setItems(JSON.parse(savedCart));
+        return JSON.parse(savedCart);
       } catch (e) {
         console.error("Erro ao carregar carrinho", e);
+        return [];
       }
     }
-    setIsLoaded(true);
-  }, []);
+    return [];
+  });
+  const [isLoaded] = useState(true);
 
   // Guardar no localStorage sempre que mudar
   useEffect(() => {

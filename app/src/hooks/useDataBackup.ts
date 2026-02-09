@@ -58,7 +58,7 @@ export function useDataBackup() {
           if (data.categories.length > 0) {
             const { error: catError } = await supabase
               .from('categories')
-              .upsert(data.categories as any[], { onConflict: 'id' });
+              .upsert(data.categories, { onConflict: 'id' });
 
             if (catError) {
               console.error('Error importing categories:', catError);
@@ -69,7 +69,7 @@ export function useDataBackup() {
           if (data.products.length > 0) {
             const { error: prodError } = await supabase
               .from('products')
-              .upsert(data.products as any[], { onConflict: 'id' });
+              .upsert(data.products, { onConflict: 'id' });
 
             if (prodError) {
               console.error('Error importing products:', prodError);

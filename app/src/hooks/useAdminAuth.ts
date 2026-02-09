@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from 'react';
 import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 
@@ -24,11 +25,19 @@ export function useAdminAuth() {
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+        const unifiedUser: AdminUser = {
+          id: parsedUser.id,
+          username: parsedUser.username,
+          name: parsedUser.name,
+          auth_id: parsedUser.auth_id,
+          user_id: parsedUser.user_id,
+        };
+        setUser(unifiedUser);
         setIsAuthenticated(true);
       } catch (error) {
         console.error('Error parsing admin user:', error);
-        logout();
+        localStorage.removeItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
+        localStorage.removeItem(AUTH_STORAGE_KEYS.ADMIN_USER);
       }
     }
 

@@ -3,8 +3,25 @@ import { supabase } from '@/lib/supabase';
 import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 import type { Product } from '@/types';
 
+interface DatabaseProduct {
+  id: string;
+  name: string;
+  price: string | number;
+  original_price?: string | number;
+  image: string;
+  category_name?: string;
+  category_id: string;
+  availability: string;
+  description?: string;
+  in_stock: boolean;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Convert database row to Product type
-function dbToProduct(row: any): Product {
+function dbToProduct(row: DatabaseProduct): Product {
   return {
     id: row.id,
     name: row.name,
@@ -13,7 +30,7 @@ function dbToProduct(row: any): Product {
     image: row.image,
     category: row.category_name || '', // Adicionado
     categoryId: row.category_id,
-    availability: row.availability,
+    availability: row.availability as 'pronta-entrega' | 'por-encomenda',
     description: row.description || undefined,
     inStock: row.in_stock,
     isActive: row.is_active,
@@ -24,13 +41,12 @@ function dbToProduct(row: any): Product {
 }
 
 // Convert Product to database row format
-function productToDb(product: Partial<Product>): any {
-  const row: any = {};
+function productToDb(product: Partial<Product>): Partial<DatabaseProduct> {
+  const row: Partial<DatabaseProduct> = {};
   if (product.name !== undefined) row.name = product.name;
   if (product.price !== undefined) row.price = product.price;
   if (product.originalPrice !== undefined) row.original_price = product.originalPrice;
   if (product.image !== undefined) row.image = product.image;
-  if (product.category !== undefined) row.category = product.category;
   if (product.categoryId !== undefined) row.category_id = product.categoryId;
   if (product.availability !== undefined) row.availability = product.availability;
   if (product.description !== undefined) row.description = product.description;
@@ -45,7 +61,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const getAuthToken = () => localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
 
 // Helper to map DB Product (API) to interface Product
-function apiToProduct(p: any): Product {
+function apiToProduct(p: Product): Product {
   return {
     ...p,
     price: Number(p.price),

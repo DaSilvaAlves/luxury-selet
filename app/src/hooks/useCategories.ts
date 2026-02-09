@@ -3,6 +3,16 @@ import { supabase } from '@/lib/supabase';
 import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 import type { Category } from '@/types';
 
+interface DatabaseCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 // API Base URL
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -241,7 +251,7 @@ export function useCategories() {
 }
 
 // Helper function for Supabase conversion
-function dbToCategory(row: any): Category {
+function dbToCategory(row: DatabaseCategory): Category {
   return {
     id: row.id,
     name: row.name,
