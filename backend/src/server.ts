@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import {
   products,
@@ -31,10 +34,45 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// SECURITY FIX #1: Enforce JWT_SECRET in production
+let JWT_SECRET: string;
+if (process.env.JWT_SECRET) {
+  JWT_SECRET = process.env.JWT_SECRET;
+} else if (process.env.NODE_ENV === 'production') {
+  console.error('❌ FATAL: JWT_SECRET environment variable is required for production');
+  process.exit(1);
+} else {
+  console.warn('⚠️  WARNING: JWT_SECRET not set, using temporary value for development only');
+  JWT_SECRET = 'dev-secret-key-change-in-production';
+}
+
+const BCRYPT_ROUNDS = 10;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
+
+// SECURITY FIX #2: Setup rate limiting for login endpoint
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 5,                     // 5 attempts per IP per windowMs
+  message: 'Too many login attempts, please try again later',
+  standardHeaders: true,      // Return rate limit info in the RateLimit-* headers
+  legacyHeaders: false,       // Disable the X-RateLimit-* headers
+  skip: (req) => process.env.NODE_ENV === 'development' // Skip rate limiting in dev
+});
 
 // Middleware
-app.use(cors());
+// SECURITY FIX #3: Add Helmet for security headers
+app.use(helmet());
+
+// SECURITY FIX #4: Configure CORS properly (not allow all origins)
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5176',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ strict: false, type: ['application/json', 'text/plain'] }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -105,28 +143,40 @@ app.post('/api/orders', (req, res) => {
 
 // ========== ADMIN ROUTES ==========
 
-// Admin login
-app.post('/api/admin/login', (req, res) => {
-  const { username, password } = req.body;
+// Admin login - SECURITY FIX: Added rate limiting and bcrypt
+app.post('/api/admin/login', loginLimiter, async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
 
-  // Simple password check (em produção usar bcrypt)
-  if (username === 'admin' && password === 'admin123') {
-    // FIXED: Unified token context with both auth_id and user_id
-    const user = {
-      id: 'admin-1',
-      username: 'admin',
-      name: 'Administrador',
-      auth_id: 'admin-1',    // OAuth provider ID
-      user_id: 'admin-1'     // System user ID (matches database)
-    };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, user });
-  } else {
-    res.status(401).json({ error: 'Invalid credentials' });
+    // SECURITY FIX #1: Use bcrypt for password comparison
+    // For MVP with hardcoded credentials, we still use bcrypt
+    const expectedHash = ADMIN_PASSWORD_HASH ||
+      '$2b$10$j7d.4C8zXvMWaFR9dV5MmuAKIUjxJJEPPrxbzMXhMUzAmhFkGKKGa'; // hash of 'admin123'
+
+    const passwordMatches = await bcrypt.compare(password, expectedHash);
+
+    if (username === ADMIN_USERNAME && passwordMatches) {
+      // FIXED: Unified token context with both auth_id and user_id
+      const user = {
+        id: 'admin-1',
+        username: username,
+        name: 'Administrador',
+        auth_id: 'admin-1',    // OAuth provider ID
+        user_id: 'admin-1'     // System user ID (matches database)
+      };
+
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
+      res.json({ token, user });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
