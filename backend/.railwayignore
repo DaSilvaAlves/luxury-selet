@@ -1,0 +1,4 @@
+prisma/
+.prisma/
+.env.example
+*.env
