@@ -170,7 +170,7 @@ function CustomerStore() {
 }
 
 function AdminPanel() {
-  const { isAuthenticated, login, logout, isLoading } = useAdminAuth();
+  const { isAuthenticated, login, logout } = useAdminAuth();
 
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     // FIXED: Use real API login that saves token to localStorage
