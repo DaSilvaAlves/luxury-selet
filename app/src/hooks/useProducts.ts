@@ -126,8 +126,12 @@ export function useProducts() {
   const addProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt'>) => {
     try {
       const token = getAuthToken();
-      if (!token) throw new Error('No auth token');
+      if (!token) {
+        console.error('[useProducts] No auth token found');
+        throw new Error('No auth token');
+      }
 
+      console.log('[useProducts] Creating product:', product);
       const response = await fetch(`${API_URL}/api/admin/products`, {
         method: 'POST',
         headers: {
@@ -137,23 +141,20 @@ export function useProducts() {
         body: JSON.stringify(product)
       });
 
-      if (!response.ok) throw new Error('Failed to add product to backend');
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('[useProducts] Backend error:', response.status, errorData);
+        throw new Error(`Failed to add product: ${response.status} ${errorData}`);
+      }
 
       const newProduct = await response.json();
+      console.log('[useProducts] Product created successfully:', newProduct);
       setProducts(prev => [newProduct, ...prev]);
       return newProduct;
     } catch (error) {
-      console.error('[useProducts] Error adding product:', error);
-      // Fallback to Supabase for emergency write
-      const dbRow = productToDb(product);
-      const { data, error: sbError } = await supabase.from('products').insert([dbRow]).select().single();
-      if (sbError) return null;
-      if (data) {
-        const newProduct = dbToProduct(data);
-        setProducts(prev => [newProduct, ...prev]);
-        return newProduct;
-      }
-      return null;
+      console.error('[useProducts] Critical error adding product:', error);
+      // Don't fallback - just fail loudly so we know there's an issue
+      throw error;
     }
   }, []);
 

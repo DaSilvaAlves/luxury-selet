@@ -13,7 +13,7 @@ import { AdminDashboard } from '@/admin/AdminDashboard';
 import { useCart } from '@/hooks/useCart';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
-import { useAuth } from '@/hooks/useAuth';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 // Products are now managed via admin panel only
 import { generateWhatsAppLink } from '@/utils/whatsapp';
 import type { CustomerData, PaymentMethod, View, Product } from '@/types';
@@ -170,23 +170,19 @@ function CustomerStore() {
 }
 
 function AdminPanel() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { validateLogin } = useAuth();
+  const { isAuthenticated, login, logout, isLoading } = useAdminAuth();
 
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
-    if (validateLogin(username, password)) {
-      setIsLoggedIn(true);
-      return true;
-    }
-    return false;
+    // FIXED: Use real API login that saves token to localStorage
+    return await login(username, password);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    logout();
     window.location.hash = '';
   };
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return <AdminLogin onLogin={handleLogin} />;
   }
 

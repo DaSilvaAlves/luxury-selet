@@ -146,12 +146,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
           isFeatured: false,
         });
         setIsAddingProduct(false);
-      } else {
-        alert('Erro ao criar produto. Verifique a ligação ao servidor.');
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Erro ao guardar produto.');
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`❌ Erro ao guardar produto:\n\n${errorMsg}\n\nVerifica a consola (F12) para mais detalhes.`);
     }
   };
 

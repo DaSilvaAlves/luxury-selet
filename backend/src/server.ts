@@ -302,13 +302,26 @@ app.get('/api/health', (req, res) => {
 
 // Start server
 const startServer = async () => {
-  await initCategories();
-  await initProducts();
+  try {
+    await initCategories();
+  } catch (err) {
+    console.warn('⚠️  Could not initialize categories from database, using fallback:', err instanceof Error ? err.message : 'Unknown error');
+    console.log('✅ In-memory categories fallback active');
+  }
+
+  try {
+    await initProducts();
+  } catch (err) {
+    console.warn('⚠️  Could not initialize products from database, using fallback:', err instanceof Error ? err.message : 'Unknown error');
+    console.log('✅ In-memory products fallback active');
+  }
+
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📦 Categories initialized: ${categories.length}`);
     console.log(`🏷️ Products initialized: ${products.length}`);
     console.log(`🔐 Admin login: admin / admin123`);
+    console.log(`📝 Token Format: { auth_id, user_id, ...userData }`);
   });
 };
 

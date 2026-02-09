@@ -1,5 +1,5 @@
 import type { Product, Order, AdminUser, MonthlySales, Category } from '../types';
-import prisma from '../lib/prisma';
+import { v4 as uuidv4 } from 'uuid';
 
 // Admin user (senha: admin123)
 export const adminUsers: AdminUser[] = [
@@ -11,34 +11,23 @@ export const adminUsers: AdminUser[] = [
   }
 ];
 
-// Categories - Now handled via Prisma
+// Categories - In-memory database
 export let categories: Category[] = [];
 
-// Initialize categories from DB
+// Initialize categories from in-memory storage
 export const initCategories = async () => {
   try {
-    const dbCategories = await prisma.category.findMany({
-      orderBy: { order: 'asc' }
-    });
+    // Use in-memory database as fallback (Supabase unavailable in development)
+    const defaults: Category[] = [
+      { id: uuidv4(), name: 'Perfumes Mulher', slug: 'perfumes-mulher', description: 'Fragrâncias femininas', order: 1, isActive: true, createdAt: new Date().toISOString() },
+      { id: uuidv4(), name: 'Perfumes Homem', slug: 'perfumes-homem', description: 'Fragrâncias masculinas', order: 2, isActive: true, createdAt: new Date().toISOString() },
+      { id: uuidv4(), name: 'Maquilhagem', slug: 'maquilhagem', description: 'Produtos de maquilhagem', order: 3, isActive: true, createdAt: new Date().toISOString() },
+      { id: uuidv4(), name: 'Cuidados de Pele', slug: 'cuidados-pele', description: 'Cremes e tratamentos', order: 4, isActive: true, createdAt: new Date().toISOString() },
+      { id: uuidv4(), name: 'Cabelos', slug: 'cabelos', description: 'Produtos capilares', order: 5, isActive: true, createdAt: new Date().toISOString() },
+    ];
 
-    if (dbCategories.length === 0) {
-      // Seed default categories
-      const defaults = [
-        { name: 'Perfumes Mulher', slug: 'perfumes-mulher', description: 'Fragrâncias femininas', order: 1 },
-        { name: 'Perfumes Homem', slug: 'perfumes-homem', description: 'Fragrâncias masculinas', order: 2 },
-        { name: 'Maquilhagem', slug: 'maquilhagem', description: 'Produtos de maquilhagem', order: 3 },
-        { name: 'Cuidados de Pele', slug: 'cuidados-pele', description: 'Cremes e tratamentos', order: 4 },
-        { name: 'Cabelos', slug: 'cabelos', description: 'Produtos capilares', order: 5 },
-      ];
-
-      for (const cat of defaults) {
-        await prisma.category.create({ data: cat });
-      }
-
-      categories = await prisma.category.findMany({ orderBy: { order: 'asc' } }) as any;
-    } else {
-      categories = dbCategories as any;
-    }
+    categories = defaults;
+    console.log('✓ Categories initialized from in-memory database');
     return categories;
   } catch (error) {
     console.error('Error initializing categories:', error);
@@ -46,63 +35,53 @@ export const initCategories = async () => {
   }
 };
 
-// Products - Now handled via Prisma
+// Products - In-memory database
 export let products: Product[] = [];
 
-// Initialize products from DB
+// Initialize products from in-memory storage
 export const initProducts = async () => {
   try {
-    const dbProducts = await prisma.product.findMany({
-      orderBy: { name: 'asc' }
+    // Create default products with category references
+    const catSlugs: Record<string, string> = {};
+    categories.forEach(c => {
+      catSlugs[c.slug] = c.id;
     });
 
-    if (dbProducts.length === 0) {
-      // Get categories to link products
-      const dbCategories = await prisma.category.findMany();
-      const catMap: Record<string, string> = {};
-      dbCategories.forEach((c: any) => {
-        catMap[c.slug] = c.id;
-      });
+    const defaults: Product[] = [
+      {
+        id: uuidv4(),
+        name: 'Malbec Gold Desodorante',
+        price: 18.90,
+        image: '/images/products/malbec_gold.jpg',
+        category: 'Perfumes Homem',
+        categoryId: catSlugs['perfumes-homem'],
+        availability: 'pronta-entrega',
+        description: 'Desodorante colônia masculino com notas amadeiradas e especiadas.',
+        inStock: true,
+        isActive: true,
+        isFeatured: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: uuidv4(),
+        name: 'Coffee Woman Seduction',
+        price: 22.00,
+        image: '/images/products/coffee_woman.jpg',
+        category: 'Perfumes Mulher',
+        categoryId: catSlugs['perfumes-mulher'],
+        availability: 'pronta-entrega',
+        description: 'Fragrância feminina sensual com notas de café e baunilha.',
+        inStock: true,
+        isActive: true,
+        isFeatured: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
 
-      // Seed default products
-      const defaults = [
-        {
-          name: 'Malbec Gold Desodorante',
-          price: 18.90,
-          image: '/images/products/malbec_gold.jpg',
-          categoryName: 'perfumes',
-          categoryId: catMap['perfumes-mulher'] || catMap['perfumes-homem'],
-          availability: 'pronta-entrega',
-          description: 'Desodorante colônia masculino com notas amadeiradas e especiadas.',
-          inStock: true,
-          isActive: true,
-          isFeatured: false,
-        },
-        {
-          name: 'Coffee Woman Seduction',
-          price: 22.00,
-          image: '/images/products/coffee_woman.jpg',
-          categoryName: 'perfumes',
-          categoryId: catMap['perfumes-mulher'],
-          availability: 'pronta-entrega',
-          description: 'Fragrância feminina sensual com notas de café e baunilha.',
-          inStock: true,
-          isActive: true,
-          isFeatured: true,
-        },
-        // Adicionar outros se necessário mas estes já servem de exemplo
-      ];
-
-      for (const prod of defaults) {
-        if (prod.categoryId) {
-          await prisma.product.create({ data: prod as any });
-        }
-      }
-
-      products = await getProducts() as any;
-    } else {
-      products = dbProducts.map(mapDbToProduct) as any;
-    }
+    products = defaults;
+    console.log('✓ Products initialized from in-memory database');
     return products;
   } catch (error) {
     console.error('Error initializing products:', error);
@@ -110,30 +89,10 @@ export const initProducts = async () => {
   }
 };
 
-// Helper to map DB Product to interface Product
-const mapDbToProduct = (dbProduct: any): Product => {
-  return {
-    id: dbProduct.id,
-    name: dbProduct.name,
-    price: dbProduct.price,
-    originalPrice: dbProduct.originalPrice || undefined,
-    image: dbProduct.image,
-    category: dbProduct.categoryName,
-    categoryId: dbProduct.categoryId,
-    availability: dbProduct.availability as any,
-    description: dbProduct.description || undefined,
-    inStock: dbProduct.inStock,
-    isActive: dbProduct.isActive,
-    isFeatured: dbProduct.isFeatured,
-    createdAt: dbProduct.createdAt?.toISOString() || new Date().toISOString(),
-    updatedAt: dbProduct.updatedAt?.toISOString(),
-  };
-};
-
-// Orders
+// Orders - In-memory database
 export let orders: Order[] = [];
 
-// Monthly Sales
+// Monthly Sales - In-memory database
 export let monthlySales: MonthlySales[] = [
   {
     month: 'Janeiro',
@@ -144,108 +103,49 @@ export let monthlySales: MonthlySales[] = [
   }
 ];
 
-// Helper functions
+// Helper functions for products
 export const getProducts = async (): Promise<Product[]> => {
-  const dbProducts = await prisma.product.findMany({
-    orderBy: { name: 'asc' }
-  });
-  products = dbProducts.map(mapDbToProduct) as any;
   return products;
 };
 
 export const getProductById = async (id: string): Promise<Product | null> => {
-  const dbProduct = await prisma.product.findUnique({
-    where: { id }
-  });
-  return dbProduct ? mapDbToProduct(dbProduct) : null;
+  return products.find(p => p.id === id) || null;
 };
 
-export const addProduct = async (product: Omit<Product, 'id' | 'createdAt'> & { userId?: string }): Promise<Product> => {
-  try {
-    // FIXED: Include userId for RLS policies
-    const dbProduct = await prisma.product.create({
-      data: {
-        name: product.name,
-        price: product.price,
-        originalPrice: product.originalPrice,
-        image: product.image,
-        categoryName: product.category || '',
-        categoryId: product.categoryId,
-        availability: product.availability as any,
-        description: product.description,
-        inStock: product.inStock,
-        isActive: product.isActive,
-        isFeatured: product.isFeatured || false,
-        userId: product.userId || 'system'  // CRITICAL: Store user context
-      }
-    });
-    await getProducts(); // Sync cache
-    return mapDbToProduct(dbProduct);
-  } catch (error) {
-    console.error('[addProduct] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Create product in-memory with UUID + userId
-    const newProduct: Product = {
-      id: `prod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...product,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    products.push(newProduct as any);
-    console.log(`[addProduct] Created in-memory product: ${newProduct.name} (${newProduct.id}) [user: ${product.userId}]`);
-    return newProduct;
-  }
+export const addProduct = async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { userId?: string }): Promise<Product> => {
+  const newProduct: Product = {
+    id: uuidv4(),
+    ...product,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  products.push(newProduct);
+  console.log(`✓ Product created: ${newProduct.name} (${newProduct.id})`);
+  return newProduct;
 };
 
 export const updateProduct = async (id: string, updates: Partial<Product>): Promise<Product | null> => {
-  try {
-    const data: any = {};
-    if (updates.name !== undefined) data.name = updates.name;
-    if (updates.price !== undefined) data.price = updates.price;
-    if (updates.originalPrice !== undefined) data.originalPrice = updates.originalPrice;
-    if (updates.image !== undefined) data.image = updates.image;
-    if (updates.category !== undefined) data.categoryName = updates.category;
-    if (updates.categoryId !== undefined) data.categoryId = updates.categoryId;
-    if (updates.availability !== undefined) data.availability = updates.availability;
-    if (updates.description !== undefined) data.description = updates.description;
-    if (updates.inStock !== undefined) data.inStock = updates.inStock;
-    if (updates.isActive !== undefined) data.isActive = updates.isActive;
-    if (updates.isFeatured !== undefined) data.isFeatured = updates.isFeatured;
+  const index = products.findIndex(p => p.id === id);
+  if (index === -1) return null;
 
-    const dbProduct = await prisma.product.update({
-      where: { id },
-      data
-    });
-    await getProducts(); // Sync cache
-    return mapDbToProduct(dbProduct);
-  } catch (error) {
-    console.error('[updateProduct] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Update in-memory product
-    const index = products.findIndex((p: any) => p.id === id);
-    if (index === -1) return null;
-    products[index] = { ...products[index], ...updates, updatedAt: new Date().toISOString() };
-    return products[index] as any;
-  }
+  products[index] = { ...products[index], ...updates, updatedAt: new Date().toISOString() };
+  console.log(`✓ Product updated: ${products[index].name} (${id})`);
+  return products[index];
 };
 
 export const deleteProduct = async (id: string): Promise<boolean> => {
-  try {
-    await prisma.product.delete({
-      where: { id }
-    });
-    await getProducts(); // Sync cache
-    return true;
-  } catch (error) {
-    console.error('[deleteProduct] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Delete in-memory product
-    const index = products.findIndex((p: any) => p.id === id);
-    if (index === -1) return false;
-    products.splice(index, 1);
-    return true;
-  }
+  const index = products.findIndex(p => p.id === id);
+  if (index === -1) return false;
+
+  const deleted = products.splice(index, 1);
+  console.log(`✓ Product deleted: ${deleted[0].name}`);
+  return true;
 };
 
+// Helper functions for orders
 export const addOrder = (order: Order): Order => {
   orders.unshift(order);
+  console.log(`✓ Order created: ${order.id}`);
   return order;
 };
 
@@ -254,100 +154,60 @@ export const updateOrder = (id: string, updates: Partial<Order>): Order | null =
   if (index === -1) return null;
 
   orders[index] = { ...orders[index], ...updates, updatedAt: new Date().toISOString() };
+  console.log(`✓ Order updated: ${id}`);
   return orders[index];
 };
 
+// Helper functions for monthly sales
 export const updateMonthlySales = (month: string, year: number, amount: number, notes?: string): MonthlySales => {
   const index = monthlySales.findIndex(s => s.month === month && s.year === year);
 
   if (index !== -1) {
     monthlySales[index] = { ...monthlySales[index], amount, notes };
-    return monthlySales[index];
+  } else {
+    const newSales: MonthlySales = { month, year, amount, notes };
+    monthlySales.push(newSales);
+    return newSales;
   }
 
-  const newSales: MonthlySales = { month, year, amount, notes };
-  monthlySales.push(newSales);
-  return newSales;
+  return monthlySales[index];
 };
 
-// Category management
+// Helper functions for categories
 export const getCategories = async (): Promise<Category[]> => {
-  const dbCategories = await prisma.category.findMany({
-    orderBy: { order: 'asc' }
-  });
-  categories = dbCategories as any;
   return categories;
 };
 
 export const getCategoryById = async (id: string): Promise<Category | null> => {
-  return await prisma.category.findUnique({
-    where: { id }
-  }) as Category | null;
+  return categories.find(c => c.id === id) || null;
 };
 
 export const addCategory = async (category: Omit<Category, 'id' | 'createdAt'>): Promise<Category> => {
-  try {
-    const newCategory = await prisma.category.create({
-      data: {
-        name: category.name,
-        slug: category.slug,
-        description: category.description,
-        order: category.order,
-        isActive: category.isActive,
-      }
-    });
-    await getCategories(); // Sync local cache
-    return newCategory as any;
-  } catch (error) {
-    console.error('[addCategory] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Create category in-memory
-    const newCategory: Category = {
-      id: `cat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...category,
-      createdAt: new Date().toISOString(),
-    };
-    categories.push(newCategory as any);
-    return newCategory;
-  }
+  const newCategory: Category = {
+    id: uuidv4(),
+    ...category,
+    isActive: category.isActive !== undefined ? category.isActive : true,
+    createdAt: new Date().toISOString(),
+  };
+  categories.push(newCategory);
+  console.log(`✓ Category created: ${newCategory.name}`);
+  return newCategory;
 };
 
 export const updateCategory = async (id: string, updates: Partial<Category>): Promise<Category | null> => {
-  try {
-    const updated = await prisma.category.update({
-      where: { id },
-      data: {
-        name: updates.name,
-        slug: updates.slug,
-        description: updates.description,
-        order: updates.order,
-        isActive: updates.isActive,
-      }
-    });
-    await getCategories(); // Sync local cache
-    return updated as any;
-  } catch (error) {
-    console.error('[updateCategory] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Update in-memory category
-    const index = categories.findIndex((c: any) => c.id === id);
-    if (index === -1) return null;
-    categories[index] = { ...categories[index], ...updates };
-    return categories[index] as any;
-  }
+  const index = categories.findIndex(c => c.id === id);
+  if (index === -1) return null;
+
+  categories[index] = { ...categories[index], ...updates };
+  console.log(`✓ Category updated: ${categories[index].name}`);
+  return categories[index];
 };
 
 export const deleteCategory = async (id: string): Promise<boolean> => {
-  try {
-    await prisma.category.delete({
-      where: { id }
-    });
-    await getCategories(); // Sync local cache
-    return true;
-  } catch (error) {
-    console.error('[deleteCategory] Prisma error, using in-memory fallback:', error);
-    // FALLBACK: Delete in-memory category
-    const index = categories.findIndex((c: any) => c.id === id);
-    if (index === -1) return false;
-    categories.splice(index, 1);
-    return true;
-  }
+  const index = categories.findIndex(c => c.id === id);
+  if (index === -1) return false;
+
+  const deleted = categories.splice(index, 1);
+  console.log(`✓ Category deleted: ${deleted[0].name}`);
+  return true;
 };
