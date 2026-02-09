@@ -35,6 +35,9 @@ model Product {
   inStock       Boolean        @default(true)
   isActive      Boolean        @default(true)
   isFeatured    Boolean        @default(false) @map("is_featured")
+  userId        String?        @map("user_id")  // FIXED: Track product owner for RLS
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@map("products")
 }

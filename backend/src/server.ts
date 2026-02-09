@@ -35,9 +35,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ strict: false, type: ['application/json', 'text/plain'] }));
+app.use(express.urlencoded({ extended: true }));
 
-// Auth middleware
+// Auth middleware - FIXED to extract unified token context
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -50,7 +51,14 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
     if (err) {
       return res.status(403).json({ error: 'Invalid token' });
     }
-    (req as any).user = user;
+    // FIXED: Ensure unified context is available
+    (req as any).user = {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      auth_id: user.auth_id || user.id,           // Fallback for backward compat
+      user_id: user.user_id || user.id            // Critical for RLS policies
+    };
     next();
   });
 };
@@ -107,7 +115,14 @@ app.post('/api/admin/login', (req, res) => {
 
   // Simple password check (em produção usar bcrypt)
   if (username === 'admin' && password === 'admin123') {
-    const user = { id: 'admin-1', username: 'admin', name: 'Administrador' };
+    // FIXED: Unified token context with both auth_id and user_id
+    const user = {
+      id: 'admin-1',
+      username: 'admin',
+      name: 'Administrador',
+      auth_id: 'admin-1',    // OAuth provider ID
+      user_id: 'admin-1'     // System user ID (matches database)
+    };
     const token = jwt.sign(user, JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, user });
   } else {
@@ -155,12 +170,18 @@ app.get('/api/admin/products', authenticateToken, async (req, res) => {
   res.json(allProducts);
 });
 
-// Create product
+// Create product - FIXED to inject user_id context
 app.post('/api/admin/products', authenticateToken, async (req, res) => {
   try {
-    const newProduct = await addProduct(req.body);
+    const userId = (req as any).user.user_id;
+    const productData = {
+      ...req.body,
+      userId  // CRITICAL: Inject user context for RLS policies
+    };
+    const newProduct = await addProduct(productData);
     res.status(201).json(newProduct);
   } catch (error) {
+    console.error('Product creation error:', error);
     res.status(500).json({ error: 'Erro ao criar produto' });
   }
 });

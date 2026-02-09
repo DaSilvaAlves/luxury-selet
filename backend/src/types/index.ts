@@ -11,6 +11,7 @@ export interface Product {
   inStock: boolean;
   isActive: boolean;
   isFeatured: boolean;
+  userId?: string;  // FIXED: Track product owner for RLS policies
   createdAt: string;
   updatedAt?: string;
 }

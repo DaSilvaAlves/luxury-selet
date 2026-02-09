@@ -8,7 +8,7 @@ export default defineConfig({
   base: './',
   plugins: [inspectAttr(), react()],
   server: { // Adiciona a configuração do servidor para definir a porta
-    port: 5174,
+    port: 5176,
   },
   resolve: {
     alias: {
