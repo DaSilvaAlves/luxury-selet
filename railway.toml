@@ -1,0 +1,12 @@
+[build]
+builder = "nixpacks"
+workingDirectory = "backend"
+
+[build.buildCommand]
+cmd = "npm install && npm run build"
+
+[deploy]
+restartPolicyType = "always"
+startCommand = "npm start"
+healthcheckPath = "/api/health"
+healthcheckInterval = 10
