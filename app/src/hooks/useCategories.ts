@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 import type { Category } from '@/types';
 
 // API Base URL
@@ -11,7 +12,7 @@ export function useCategories() {
 
   // Get auth token for API calls
   const getAuthToken = useCallback(() => {
-    return localStorage.getItem('admin-token');
+    return localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
   }, []);
 
   // Load categories from Backend API first, then Supabase, then localStorage

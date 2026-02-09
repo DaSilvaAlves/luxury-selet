@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 import type { Product } from '@/types';
 
 // Convert database row to Product type
@@ -41,7 +42,7 @@ function productToDb(product: Partial<Product>): any {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const getAuthToken = () => localStorage.getItem('luxury-selet-token');
+const getAuthToken = () => localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
 
 // Helper to map DB Product (API) to interface Product
 function apiToProduct(p: any): Product {

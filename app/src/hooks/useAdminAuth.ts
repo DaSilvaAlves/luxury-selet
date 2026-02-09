@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { AUTH_STORAGE_KEYS } from '@/lib/auth-constants';
 
 interface AdminUser {
   id: string;
   username: string;
   name: string;
 }
-
-const ADMIN_TOKEN_KEY = 'oboticario-admin-token';
-const ADMIN_USER_KEY = 'oboticario-admin-user';
 
 export function useAdminAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,8 +14,8 @@ export function useAdminAuth() {
 
   // Check for existing session on mount
   useEffect(() => {
-    const token = localStorage.getItem(ADMIN_TOKEN_KEY);
-    const storedUser = localStorage.getItem(ADMIN_USER_KEY);
+    const token = localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
+    const storedUser = localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_USER);
     
     if (token && storedUser) {
       try {
@@ -51,8 +49,8 @@ export function useAdminAuth() {
         };
         const mockToken = 'mock-jwt-token';
         
-        localStorage.setItem(ADMIN_TOKEN_KEY, mockToken);
-        localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(mockUser));
+        localStorage.setItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN, mockToken);
+        localStorage.setItem(AUTH_STORAGE_KEYS.ADMIN_USER, JSON.stringify(mockUser));
         
         setUser(mockUser);
         setIsAuthenticated(true);
@@ -67,14 +65,14 @@ export function useAdminAuth() {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    localStorage.removeItem(ADMIN_USER_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.ADMIN_USER);
     setUser(null);
     setIsAuthenticated(false);
   }, []);
 
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+    const token = localStorage.getItem(AUTH_STORAGE_KEYS.ADMIN_TOKEN);
     return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
